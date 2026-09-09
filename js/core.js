@@ -166,12 +166,15 @@ var blurMat = new THREE.ShaderMaterial({
   fragmentShader: [
     'uniform sampler2D tDiffuse; uniform vec2 uDir; varying vec2 vUv;',
     'void main(){',
-    '  vec3 c = texture2D(tDiffuse, vUv).rgb * 0.2270270270;',
-    '  c += texture2D(tDiffuse, vUv + uDir * 1.3846153846).rgb * 0.3162162162;',
-    '  c += texture2D(tDiffuse, vUv - uDir * 1.3846153846).rgb * 0.3162162162;',
-    '  c += texture2D(tDiffuse, vUv + uDir * 3.2307692308).rgb * 0.0702702703;',
-    '  c += texture2D(tDiffuse, vUv - uDir * 3.2307692308).rgb * 0.0702702703;',
-    '  gl_FragColor = vec4(c, 1.0);',
+    /* rgba, not rgb: the haze pass carries its traced lamp shadow in alpha and it needs the same
+       softening as the light does. For the bloom and occlusion chains alpha is 1 throughout, so
+       blurring it changes nothing there. */
+    '  vec4 c = texture2D(tDiffuse, vUv) * 0.2270270270;',
+    '  c += texture2D(tDiffuse, vUv + uDir * 1.3846153846) * 0.3162162162;',
+    '  c += texture2D(tDiffuse, vUv - uDir * 1.3846153846) * 0.3162162162;',
+    '  c += texture2D(tDiffuse, vUv + uDir * 3.2307692308) * 0.0702702703;',
+    '  c += texture2D(tDiffuse, vUv - uDir * 3.2307692308) * 0.0702702703;',
+    '  gl_FragColor = c;',
     '}'
   ].join('\n'),
   depthTest: false, depthWrite: false
@@ -191,6 +194,7 @@ var postMat = new THREE.ShaderMaterial({
     tVolume: { value: null },
     uVolume: { value: 0.0 },
     uExposure: { value: 0.98 },
+    uLampShadow: { value: 0.85 },
     uSat: { value: 1.14 },
     uContrast: { value: 1.05 },
     uSCurve: { value: 0.32 },
@@ -201,7 +205,7 @@ var postMat = new THREE.ShaderMaterial({
     'uniform sampler2D tDiffuse; uniform sampler2D tBloom; uniform sampler2D tBloomWide; uniform sampler2D tAO;',
     'uniform sampler2D tVolume;',
     'uniform float uBloom; uniform float uBloomWide; uniform float uAO; uniform float uSharpen; uniform float uGrain;',
-    'uniform float uVolume; uniform float uSat; uniform float uContrast; uniform float uSCurve;',
+    'uniform float uVolume; uniform float uLampShadow; uniform float uSat; uniform float uContrast; uniform float uSCurve;',
     'uniform float uExposure; uniform float uTime; uniform vec2 uResolution; varying vec2 vUv;',
     '/* three.js ACES, lifted so it can run here at the end instead of inside the scene pass */',
     'vec3 tonemap(vec3 c){',
@@ -229,6 +233,9 @@ var postMat = new THREE.ShaderMaterial({
     '  float ao = mix(1.0, texture2D(tAO, vUv).r, uAO);',
     '  float lum = max(hdr.r, max(hdr.g, hdr.b));',
     '  vec3 base = hdr * mix(ao, 1.0, smoothstep(0.70, 2.00, lum));',
+    '  /* the traced fixture shadow, released on emitters the same way the occlusion is */',
+    '  float lampShadow = mix(1.0, texture2D(tVolume, vUv).a, uLampShadow);',
+    '  base *= mix(lampShadow, 1.0, smoothstep(0.70, 2.00, lum));',
     '  /* tight core plus wide skirt, both in linear light */',
     '  vec3 lit = base + texture2D(tBloom, vUv).rgb * uBloom + texture2D(tBloomWide, vUv).rgb * uBloomWide;',
     '  /* Lit haze. It is added, never multiplied: air in a light beam emits toward the eye, it',
@@ -378,10 +385,18 @@ ssaoMat.extensions.derivatives = true;
    shadow-casting light in the scene is the key, not the fixtures. Marching stops at scene depth,
    so a beam is cut off by the pillar in front of it. The start of each ray is dithered per pixel
    and the result is blurred, or sixteen steps would band into visible slices. */
-var VOL_STEPS = 16, VOL_LIGHTS = 4, VOL_AMOUNT = 1.0;
+var VOL_STEPS = 16, VOL_LIGHTS = 4, VOL_OCC = 8, VOL_AMOUNT = 1.0;
 var volTarget = null, volBlurTarget = null;
 var volLights = [];
 for (var vi = 0; vi < VOL_LIGHTS; vi++) volLights.push(new THREE.Vector4(0, -999, 0, 1));
+/* The boxes a beam can be cut by. The station is built from axis-aligned boxes and already keeps
+   them in COL for the bullets, so the same set can be traced against in the shader. Unused slots
+   are parked far underground where no ray will ever reach them. */
+var volOccMin = [], volOccMax = [], volOccScratch = [];
+for (var oi = 0; oi < VOL_OCC; oi++) {
+  volOccMin.push(new THREE.Vector3(0, -9999, 0));
+  volOccMax.push(new THREE.Vector3(0, -9998, 0));
+}
 try {
   if (aoEnabled) {
     var volOpts = { minFilter: THREE.LinearFilter, magFilter: THREE.LinearFilter, format: THREE.RGBAFormat, type: (renderer.capabilities.isWebGL2 ? THREE.HalfFloatType : THREE.UnsignedByteType), depthBuffer: false, stencilBuffer: false };
@@ -390,19 +405,41 @@ try {
   }
 } catch (e) { volTarget = null; }
 var volMat = new THREE.ShaderMaterial({
-  defines: { VOL_STEPS: VOL_STEPS, VOL_LIGHTS: VOL_LIGHTS },
+  defines: { VOL_STEPS: VOL_STEPS, VOL_LIGHTS: VOL_LIGHTS, VOL_OCC: VOL_OCC },
   uniforms: {
     tDepth: { value: null }, uProjInv: { value: new THREE.Matrix4() }, uCamWorld: { value: new THREE.Matrix4() },
     uLights: { value: volLights }, uColor: { value: new THREE.Color(0.62, 0.74, 0.92) },
-    uDensity: { value: 0.23 }, uConeCos: { value: 0.74 }, uFar: { value: 24.0 },
+    uOccMin: { value: volOccMin }, uOccMax: { value: volOccMax },
+    /* the traced shadow ray now rejects better than nine samples in ten, so what survives has to
+       carry the beam on its own; the cone is opened a little too, since it is no longer the only
+       thing keeping light off the walls */
+    uDensity: { value: 0.44 }, uConeCos: { value: 0.68 }, uFar: { value: 24.0 },
     uRes: { value: new THREE.Vector2(1, 1) }, uTime: { value: 0 }
   },
   vertexShader: POST_VS,
   fragmentShader: [
     'uniform sampler2D tDepth; uniform mat4 uProjInv; uniform mat4 uCamWorld;',
     'uniform vec4 uLights[VOL_LIGHTS]; uniform vec3 uColor;',
+    'uniform vec3 uOccMin[VOL_OCC]; uniform vec3 uOccMax[VOL_OCC];',
     'uniform float uDensity; uniform float uConeCos; uniform float uFar; uniform float uTime;',
     'uniform vec2 uRes; varying vec2 vUv;',
+    '/* A shadow ray, traced. Slab test of the segment from the sample in the air to the lamp against',
+    '   the nearest station boxes: if anything is in the way, that pocket of air gets no light from',
+    '   that fixture. This is what makes a shaft a shaft - cut off by the pillar in front of it rather',
+    '   than glowing through it - and it is not something a shadow map could do here, because the',
+    '   fixtures are not the shadow-casting light. */',
+    'bool occluded(vec3 p, vec3 lp){',
+    '  vec3 ds = (lp - p) + vec3(1e-6);',
+    '  for(int b = 0; b < VOL_OCC; b++){',
+    '    vec3 t0 = (uOccMin[b] - p) / ds;',
+    '    vec3 t1 = (uOccMax[b] - p) / ds;',
+    '    vec3 tn = min(t0, t1), tf = max(t0, t1);',
+    '    float lo = max(max(tn.x, tn.y), tn.z);',
+    '    float hi = min(min(tf.x, tf.y), tf.z);',
+    '    if(hi >= max(lo, 0.0) && lo < 1.0) return true;',
+    '  }',
+    '  return false;',
+    '}',
     'void main(){',
     '  float d = texture2D(tDepth, vUv).x;',
     '  vec4 cp = vec4(vUv * 2.0 - 1.0, d * 2.0 - 1.0, 1.0);',
@@ -425,14 +462,33 @@ var volMat = new THREE.ShaderMaterial({
     '      if(dl > lt.w) continue;',
     '      float down = clamp(-toP.y / max(dl, 1e-4), 0.0, 1.0);',   /* 1 directly beneath the strip */
     '      float cone = smoothstep(uConeCos, 1.0, down);',
-    '      float atten = 1.0 - clamp(dl / lt.w, 0.0, 1.0);',
     '      cone *= cone;',
+    '      if(cone < 0.003) continue;',                 /* outside the beam: never trace */
+    '      if(occluded(p, lt.xyz)) continue;',          /* in the station's shadow */
+    '      float atten = 1.0 - clamp(dl / lt.w, 0.0, 1.0);',
     '      acc += cone * atten * atten;',
     '    }',
     '  }',
     '  /* fade the march out with range, or the far end of the platform sits under a sheet */',
     '  acc *= uDensity * stepLen * (1.0 - 0.55 * clamp(dist / uFar, 0.0, 1.0));',
-    '  gl_FragColor = vec4(uColor * acc, 1.0);',
+    '  /* And the useful ray: from the point the depth buffer says we are looking at, trace to every',
+    '     fixture near enough to matter. The station has exactly one shadow-casting light and none of',
+    '     the twelve ceiling fixtures is it, so this is the only way a pillar, a bench or a kiosk can',
+    '     put a shadow on the floor from the lamp directly above it. The start is nudged along the ray',
+    '     so a surface does not shadow itself on its own box. */',
+    '  float vis = 0.0, wsum = 0.0;',
+    '  for(int S = 0; S < VOL_LIGHTS; S++){',
+    '    vec4 sl = uLights[S];',
+    '    vec3 tw = sl.xyz - world;',
+    '    float dw = length(tw);',
+    '    if(dw > sl.w) continue;',
+    '    float wgt = 1.0 - clamp(dw / sl.w, 0.0, 1.0);',
+    '    wsum += wgt;',
+    '    if(!occluded(world + (tw / max(dw, 1e-4)) * 0.07, sl.xyz)) vis += wgt;',
+    '  }',
+    '  /* never to black: the bake and the ambient still light what the fixtures cannot reach */',
+    '  float shadow = wsum > 0.0 ? (0.34 + 0.66 * (vis / wsum)) : 1.0;',
+    '  gl_FragColor = vec4(uColor * acc, shadow);',
     '}'
   ].join('\n'),
   depthTest: false, depthWrite: false
@@ -454,6 +510,25 @@ function renderVolume(){
       var p = volScratch[k][1];
       volLights[k].set(p[0], p[1], p[2], 9.0);
     } else volLights[k].set(0, -999, 0, 0.001);
+  }
+  /* the nearest boxes tall enough to cut a beam; anything shorter cannot reach up into one */
+  if(typeof COL !== 'undefined'){
+    volOccScratch.length = 0;
+    for(var c = 0; c < COL.length; c++){
+      var bx = COL[c];
+      if(bx.ghost || (bx.max[1] - bx.min[1]) < 1.2) continue;
+      var ox = (bx.min[0] + bx.max[0]) * 0.5 - camera.position.x;
+      var oz = (bx.min[2] + bx.max[2]) * 0.5 - camera.position.z;
+      volOccScratch.push([ox * ox + oz * oz, bx]);
+    }
+    volOccScratch.sort(function(a, b){ return a[0] - b[0]; });
+    for(var q = 0; q < VOL_OCC; q++){
+      if(q < volOccScratch.length){
+        var ob = volOccScratch[q][1];
+        volOccMin[q].set(ob.min[0], ob.min[1], ob.min[2]);
+        volOccMax[q].set(ob.max[0], ob.max[1], ob.max[2]);
+      } else { volOccMin[q].set(0, -9999, 0); volOccMax[q].set(0, -9998, 0); }
+    }
   }
   volMat.uniforms.tDepth.value = aoDepthTarget.depthTexture;
   volMat.uniforms.uProjInv.value.copy(camera.projectionMatrixInverse);
