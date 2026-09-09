@@ -280,6 +280,28 @@ TX.gravel=paint(256,256,function(g,w,h){
   grain(g,1200,.16,w,h);
 });
 
+/* The ballast is 7.7 x 84 m of crushed stone and carried a colour map and nothing else, so it read
+   as printed gravel rather than as loose stone. The same 2000-stone loop that paints it is redrawn
+   here as radial domes - bright at the crown, falling away into the gap - which is a height field,
+   and normalFrom turns that into the tangent-space normals the light needs to catch each stone. */
+TX.gravelNormal=normalFrom(256,256,function(g,w,h){
+  g.fillStyle='#2a2a2a';g.fillRect(0,0,w,h);
+  for(var i=0;i<2000;i++){
+    var x=rnd()*w,y=rnd()*h,s=rnd()*7+2;
+    var gr=g.createRadialGradient(x,y,0,x,y,s);
+    gr.addColorStop(0,'rgba(236,236,236,0.95)');
+    gr.addColorStop(1,'rgba(34,34,34,0)');
+    g.fillStyle=gr;g.beginPath();g.arc(x,y,s,0,TAU);g.fill();
+  }
+},null,null,3.2);
+/* crushed stone is about as rough as a surface gets; the dark patches are where oil and standing
+   water between the sleepers polish it, and those are the only places the rails reflect */
+TX.gravelRough=dataTex(256,256,function(g,w,h){
+  g.fillStyle='#f2f2f2';g.fillRect(0,0,w,h);
+  blotches(g,7,w,h,20,70,'70,70,70',.55);
+  grain(g,900,.12,w,h);
+});
+
 /* Brushed gunmetal for crates, stanchions and fittings */
 TX.metal=paint(256,256,function(g,w,h){
   g.fillStyle='#2c3335';g.fillRect(0,0,w,h);
@@ -315,6 +337,24 @@ TX.panel=paint(512,512,function(g,w,h){
   grain(g,2400,.08,w,h);
 });
 TX.panelRough=dataTex(256,256,function(g,w,h){g.fillStyle='#e0e0e0';g.fillRect(0,0,w,h);blotches(g,8,w,h,30,90,'150,150,150',.5);grain(g,400,.1,w,h);});
+/* The soffit is 19 x 84 m - the largest surface in the station and the top third of the frame
+   whenever you look level or up - and it had a colour map and a near-flat roughness map, nothing
+   that light could catch. Its own texture already implies the shuttering: seams every 128 px and
+   hollows where the water rings sit. Cut those in as height and let normalFrom read them. */
+TX.panelNormal=normalFrom(256,256,function(g,w,h){
+  g.fillStyle='#8a8a8a';g.fillRect(0,0,w,h);
+  blotches(g,16,w,h,30,100,'150,150,150',.35);                       /* swells in the pour */
+  g.strokeStyle='rgba(20,20,20,.85)';g.lineWidth=2;                  /* formwork seams, cut in */
+  for(var k=0;k<4;k++){
+    g.beginPath();g.moveTo(0,k*64);g.lineTo(w,k*64);g.stroke();
+    g.beginPath();g.moveTo(k*64,0);g.lineTo(k*64,h);g.stroke();
+  }
+  for(var i=0;i<5;i++){                                              /* the dish under a stain */
+    var x=rnd()*w,y=rnd()*h,r=rr(10,30);
+    g.fillStyle='rgba(60,60,60,.5)';g.beginPath();g.arc(x,y,r,0,TAU);g.fill();
+  }
+  grain(g,1200,.10,w,h);
+},null,null,2.2);
 
 TX.grime=paint(256,256,function(g,w,h){
   g.fillStyle='#202729';g.fillRect(0,0,w,h);
@@ -899,13 +939,15 @@ var M={
   tileCol:mat(rep(TX.tile,.18,1.5),{rough:1,metal:.02,normal:rep(TX.tileBump,.18,1.5),ns:.55,roughMap:rep(TX.tileRough,.18,1.5),envMapI:.55}),
   wainscot:mat(rep(TX.wainscot,16,1),{rough:1,metal:.06,roughMap:rep(TX.wainscotRough,16,1),envMapI:.58}),
   floor:mat(rep(TX.concrete,2,12),{rough:1,metal:.03,normal:rep(TX.concBump,2,12),ns:.55,roughMap:rep(TX.concRough,2,12),envMapI:.48}),
-  gravel:mat(rep(TX.gravel,12,64),{rough:.96,envMapI:.15}),
+  gravel:mat(rep(TX.gravel,12,64),{rough:1,metal:.02,normal:rep(TX.gravelNormal,12,64),ns:.85,
+    roughMap:rep(TX.gravelRough,12,64),envMapI:.18}),
   metal:mat(rep(TX.metal,1,1),{rough:1,metal:.8,normal:TX.metalNormal,ns:.35,roughMap:TX.metalRough,envMapI:.65}),
   metalLong:plain(0x353f42,.44,.86,.65),
   rail:plain(0xdee3e1,.12,.98,1.1),
   railRust:mat(rep(TX.rust,1,24),{rough:.88,metal:.35,envMapI:.15}),
   sleeper:plain(0x47443e,.92,.05,.1),
-  panel:mat(rep(TX.panel,6,26),{rough:1,roughMap:rep(TX.panelRough,6,26),envMapI:.15}),
+  panel:mat(rep(TX.panel,6,26),{rough:1,normal:rep(TX.panelNormal,6,26),ns:.55,
+    roughMap:rep(TX.panelRough,6,26),envMapI:.15}),
   tactile:mat(rep(TX.tactile,1,72),{rough:.58,metal:.12,envMapI:.30}),
   paintLine:mat(rep(TX.paintLine,1,60),{rough:.68,metal:.02,envMapI:.35}),
   grime:mat(rep(TX.grime,4,3),{rough:1,envMapI:.1}),
@@ -979,7 +1021,12 @@ function bakeSurface(W,H,toWorld,nx,ny,nz,emitters,occluders,opt){
       var E=sm.p*cos*lobe/(d2+0.35);
       r+=E*sm.r;g+=E*sm.g;bl+=E*sm.b;
     }
-    var i=(py*W+px)*4,k2=gain*ao;
+    /* The same occlusion is written into the aoMap a few lines down, and r128 runs aomap_fragment
+       after lights_fragment_maps, so folding it in here as well attenuated the baked irradiance by
+       ao squared: every crease, wainscot bottom and prop base was darker than the bake's own model
+       says, which crushed exactly the range the light map was tuned to carry. The light map now
+       holds pure irradiance and the aoMap applies the occlusion once. */
+    var i=(py*W+px)*4,k2=gain;
     ld[i]=Math.round(255*Math.pow(Math.min(1,r*k2),1/2.2));
     ld[i+1]=Math.round(255*Math.pow(Math.min(1,g*k2),1/2.2));
     ld[i+2]=Math.round(255*Math.pow(Math.min(1,bl*k2),1/2.2));
