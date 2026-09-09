@@ -1,0 +1,673 @@
+[
+  {
+    "mobile": false,
+    "checks": [
+      {
+        "name": "station batches reduce mesh count",
+        "pass": true
+      },
+      {
+        "name": "render target absent from balanced path",
+        "pass": true
+      },
+      {
+        "name": "quality performance",
+        "pass": true
+      },
+      {
+        "name": "quality balanced",
+        "pass": true
+      },
+      {
+        "name": "quality ultra",
+        "pass": true
+      },
+      {
+        "name": "quality auto",
+        "pass": true
+      },
+      {
+        "name": "crouch changes actual eye height",
+        "pass": true
+      },
+      {
+        "name": "held jump does not bunny-hop",
+        "pass": true
+      },
+      {
+        "name": "camera-aligned ADS headshot is immediate",
+        "pass": true
+      },
+      {
+        "name": "one shot consumes one round",
+        "pass": true
+      },
+      {
+        "name": "camera-origin shot 1.14 -7",
+        "pass": true
+      },
+      {
+        "name": "camera-origin shot 1.62 -9",
+        "pass": true
+      },
+      {
+        "name": "camera-origin shot 2.5 -6",
+        "pass": true
+      },
+      {
+        "name": "walls block bullets",
+        "pass": true
+      },
+      {
+        "name": "tracer pool cannot drop damage",
+        "pass": true
+      },
+      {
+        "name": "misses do not create impact particles",
+        "pass": true
+      },
+      {
+        "name": "tracers expire without spawning more tracers",
+        "pass": true
+      },
+      {
+        "name": "close-range trail never extends through its endpoint",
+        "pass": true
+      },
+      {
+        "name": "wall impact leaves a surface-aligned mark",
+        "pass": true
+      },
+      {
+        "name": "bullet marks stay within fixed pool",
+        "pass": true
+      },
+      {
+        "name": "new match clears impact marks",
+        "pass": true
+      },
+      {
+        "name": "empty reload refills magazine",
+        "pass": true
+      },
+      {
+        "name": "weapon 0 grip restored after reload",
+        "pass": true
+      },
+      {
+        "name": "weapon 0 magazine complete",
+        "pass": true
+      },
+      {
+        "name": "weapon 0 finger belongs to firing hand",
+        "pass": true
+      },
+      {
+        "name": "weapon 1 grip restored after reload",
+        "pass": true
+      },
+      {
+        "name": "weapon 1 magazine complete",
+        "pass": true
+      },
+      {
+        "name": "weapon 1 finger belongs to firing hand",
+        "pass": true
+      },
+      {
+        "name": "weapon 2 grip restored after reload",
+        "pass": true
+      },
+      {
+        "name": "weapon 2 magazine complete",
+        "pass": true
+      },
+      {
+        "name": "weapon 2 finger belongs to firing hand",
+        "pass": true
+      },
+      {
+        "name": "weapon 3 grip restored after reload",
+        "pass": true
+      },
+      {
+        "name": "weapon 3 magazine complete",
+        "pass": true
+      },
+      {
+        "name": "weapon 3 finger belongs to firing hand",
+        "pass": true
+      },
+      {
+        "name": "weapon 4 grip restored after reload",
+        "pass": true
+      },
+      {
+        "name": "weapon 4 magazine complete",
+        "pass": true
+      },
+      {
+        "name": "weapon 4 finger belongs to firing hand",
+        "pass": true
+      },
+      {
+        "name": "every weapon has a muzzle socket",
+        "pass": true
+      },
+      {
+        "name": "socket follows ADS and recoil",
+        "pass": true
+      },
+      {
+        "name": "world muzzle sits on the view-model muzzle pixel",
+        "pass": true
+      },
+      {
+        "name": "shot smoke starts at the muzzle",
+        "pass": true
+      },
+      {
+        "name": "smoke does not follow the camera",
+        "pass": true
+      },
+      {
+        "name": "sustained fire stays inside the smoke pool",
+        "pass": true
+      },
+      {
+        "name": "smoke settles and hides",
+        "pass": true
+      },
+      {
+        "name": "weapon 0 fingers do not clip the weapon",
+        "pass": true
+      },
+      {
+        "name": "weapon 0 fingers actually hold the grip",
+        "pass": true
+      },
+      {
+        "name": "weapon 1 fingers do not clip the weapon",
+        "pass": true
+      },
+      {
+        "name": "weapon 1 fingers actually hold the grip",
+        "pass": true
+      },
+      {
+        "name": "weapon 2 fingers do not clip the weapon",
+        "pass": true
+      },
+      {
+        "name": "weapon 2 fingers actually hold the grip",
+        "pass": true
+      },
+      {
+        "name": "weapon 3 fingers do not clip the weapon",
+        "pass": true
+      },
+      {
+        "name": "weapon 3 fingers actually hold the grip",
+        "pass": true
+      },
+      {
+        "name": "weapon 4 fingers do not clip the weapon",
+        "pass": true
+      },
+      {
+        "name": "weapon 4 fingers actually hold the grip",
+        "pass": true
+      },
+      {
+        "name": "weapon 0 sleeves leave the frame",
+        "pass": true
+      },
+      {
+        "name": "weapon 0 sleeves keep their proportions",
+        "pass": true
+      },
+      {
+        "name": "weapon 0 hands stay on their grips",
+        "pass": true
+      },
+      {
+        "name": "weapon 1 sleeves leave the frame",
+        "pass": true
+      },
+      {
+        "name": "weapon 1 sleeves keep their proportions",
+        "pass": true
+      },
+      {
+        "name": "weapon 1 hands stay on their grips",
+        "pass": true
+      },
+      {
+        "name": "weapon 2 sleeves leave the frame",
+        "pass": true
+      },
+      {
+        "name": "weapon 2 sleeves keep their proportions",
+        "pass": true
+      },
+      {
+        "name": "weapon 2 hands stay on their grips",
+        "pass": true
+      },
+      {
+        "name": "weapon 3 sleeves leave the frame",
+        "pass": true
+      },
+      {
+        "name": "weapon 3 sleeves keep their proportions",
+        "pass": true
+      },
+      {
+        "name": "weapon 3 hands stay on their grips",
+        "pass": true
+      },
+      {
+        "name": "weapon 4 sleeves leave the frame",
+        "pass": true
+      },
+      {
+        "name": "weapon 4 sleeves keep their proportions",
+        "pass": true
+      },
+      {
+        "name": "weapon 4 hands stay on their grips",
+        "pass": true
+      },
+      {
+        "name": "trigger finger moves onto the trigger when firing",
+        "pass": true
+      },
+      {
+        "name": "pistol fires once per press",
+        "pass": true
+      },
+      {
+        "name": "pistol fires again on the next press",
+        "pass": true
+      },
+      {
+        "name": "pistol has a magazine that can drop",
+        "pass": true
+      },
+      {
+        "name": "pistol sits closer than the long guns",
+        "pass": true
+      },
+      {
+        "name": "shotgun pump returns home",
+        "pass": true
+      },
+      {
+        "name": "rail scope hides view model",
+        "pass": true
+      },
+      {
+        "name": "scope has actual range readout",
+        "pass": true
+      },
+      {
+        "name": "pause releases fire and ADS",
+        "pass": true
+      },
+      {
+        "name": "resume restores weapon",
+        "pass": true
+      },
+      {
+        "name": "auto reduces quality under sustained load",
+        "pass": true
+      }
+    ],
+    "batchStats": {
+      "before": 334,
+      "after": 47
+    },
+    "coarse": false,
+    "scale": 1,
+    "drawCalls": 73
+  },
+  {
+    "mobile": true,
+    "checks": [
+      {
+        "name": "station batches reduce mesh count",
+        "pass": true
+      },
+      {
+        "name": "render target absent from balanced path",
+        "pass": true
+      },
+      {
+        "name": "quality performance",
+        "pass": true
+      },
+      {
+        "name": "quality balanced",
+        "pass": true
+      },
+      {
+        "name": "quality ultra",
+        "pass": true
+      },
+      {
+        "name": "quality auto",
+        "pass": true
+      },
+      {
+        "name": "crouch changes actual eye height",
+        "pass": true
+      },
+      {
+        "name": "held jump does not bunny-hop",
+        "pass": true
+      },
+      {
+        "name": "camera-aligned ADS headshot is immediate",
+        "pass": true
+      },
+      {
+        "name": "one shot consumes one round",
+        "pass": true
+      },
+      {
+        "name": "camera-origin shot 1.14 -7",
+        "pass": true
+      },
+      {
+        "name": "camera-origin shot 1.62 -9",
+        "pass": true
+      },
+      {
+        "name": "camera-origin shot 2.5 -6",
+        "pass": true
+      },
+      {
+        "name": "walls block bullets",
+        "pass": true
+      },
+      {
+        "name": "tracer pool cannot drop damage",
+        "pass": true
+      },
+      {
+        "name": "misses do not create impact particles",
+        "pass": true
+      },
+      {
+        "name": "tracers expire without spawning more tracers",
+        "pass": true
+      },
+      {
+        "name": "close-range trail never extends through its endpoint",
+        "pass": true
+      },
+      {
+        "name": "wall impact leaves a surface-aligned mark",
+        "pass": true
+      },
+      {
+        "name": "bullet marks stay within fixed pool",
+        "pass": true
+      },
+      {
+        "name": "new match clears impact marks",
+        "pass": true
+      },
+      {
+        "name": "empty reload refills magazine",
+        "pass": true
+      },
+      {
+        "name": "weapon 0 grip restored after reload",
+        "pass": true
+      },
+      {
+        "name": "weapon 0 magazine complete",
+        "pass": true
+      },
+      {
+        "name": "weapon 0 finger belongs to firing hand",
+        "pass": true
+      },
+      {
+        "name": "weapon 1 grip restored after reload",
+        "pass": true
+      },
+      {
+        "name": "weapon 1 magazine complete",
+        "pass": true
+      },
+      {
+        "name": "weapon 1 finger belongs to firing hand",
+        "pass": true
+      },
+      {
+        "name": "weapon 2 grip restored after reload",
+        "pass": true
+      },
+      {
+        "name": "weapon 2 magazine complete",
+        "pass": true
+      },
+      {
+        "name": "weapon 2 finger belongs to firing hand",
+        "pass": true
+      },
+      {
+        "name": "weapon 3 grip restored after reload",
+        "pass": true
+      },
+      {
+        "name": "weapon 3 magazine complete",
+        "pass": true
+      },
+      {
+        "name": "weapon 3 finger belongs to firing hand",
+        "pass": true
+      },
+      {
+        "name": "weapon 4 grip restored after reload",
+        "pass": true
+      },
+      {
+        "name": "weapon 4 magazine complete",
+        "pass": true
+      },
+      {
+        "name": "weapon 4 finger belongs to firing hand",
+        "pass": true
+      },
+      {
+        "name": "every weapon has a muzzle socket",
+        "pass": true
+      },
+      {
+        "name": "socket follows ADS and recoil",
+        "pass": true
+      },
+      {
+        "name": "world muzzle sits on the view-model muzzle pixel",
+        "pass": true
+      },
+      {
+        "name": "shot smoke starts at the muzzle",
+        "pass": true
+      },
+      {
+        "name": "smoke does not follow the camera",
+        "pass": true
+      },
+      {
+        "name": "sustained fire stays inside the smoke pool",
+        "pass": true
+      },
+      {
+        "name": "smoke settles and hides",
+        "pass": true
+      },
+      {
+        "name": "weapon 0 fingers do not clip the weapon",
+        "pass": true
+      },
+      {
+        "name": "weapon 0 fingers actually hold the grip",
+        "pass": true
+      },
+      {
+        "name": "weapon 1 fingers do not clip the weapon",
+        "pass": true
+      },
+      {
+        "name": "weapon 1 fingers actually hold the grip",
+        "pass": true
+      },
+      {
+        "name": "weapon 2 fingers do not clip the weapon",
+        "pass": true
+      },
+      {
+        "name": "weapon 2 fingers actually hold the grip",
+        "pass": true
+      },
+      {
+        "name": "weapon 3 fingers do not clip the weapon",
+        "pass": true
+      },
+      {
+        "name": "weapon 3 fingers actually hold the grip",
+        "pass": true
+      },
+      {
+        "name": "weapon 4 fingers do not clip the weapon",
+        "pass": true
+      },
+      {
+        "name": "weapon 4 fingers actually hold the grip",
+        "pass": true
+      },
+      {
+        "name": "weapon 0 sleeves leave the frame",
+        "pass": true
+      },
+      {
+        "name": "weapon 0 sleeves keep their proportions",
+        "pass": true
+      },
+      {
+        "name": "weapon 0 hands stay on their grips",
+        "pass": true
+      },
+      {
+        "name": "weapon 1 sleeves leave the frame",
+        "pass": true
+      },
+      {
+        "name": "weapon 1 sleeves keep their proportions",
+        "pass": true
+      },
+      {
+        "name": "weapon 1 hands stay on their grips",
+        "pass": true
+      },
+      {
+        "name": "weapon 2 sleeves leave the frame",
+        "pass": true
+      },
+      {
+        "name": "weapon 2 sleeves keep their proportions",
+        "pass": true
+      },
+      {
+        "name": "weapon 2 hands stay on their grips",
+        "pass": true
+      },
+      {
+        "name": "weapon 3 sleeves leave the frame",
+        "pass": true
+      },
+      {
+        "name": "weapon 3 sleeves keep their proportions",
+        "pass": true
+      },
+      {
+        "name": "weapon 3 hands stay on their grips",
+        "pass": true
+      },
+      {
+        "name": "weapon 4 sleeves leave the frame",
+        "pass": true
+      },
+      {
+        "name": "weapon 4 sleeves keep their proportions",
+        "pass": true
+      },
+      {
+        "name": "weapon 4 hands stay on their grips",
+        "pass": true
+      },
+      {
+        "name": "trigger finger moves onto the trigger when firing",
+        "pass": true
+      },
+      {
+        "name": "pistol fires once per press",
+        "pass": true
+      },
+      {
+        "name": "pistol fires again on the next press",
+        "pass": true
+      },
+      {
+        "name": "pistol has a magazine that can drop",
+        "pass": true
+      },
+      {
+        "name": "pistol sits closer than the long guns",
+        "pass": true
+      },
+      {
+        "name": "shotgun pump returns home",
+        "pass": true
+      },
+      {
+        "name": "rail scope hides view model",
+        "pass": true
+      },
+      {
+        "name": "scope has actual range readout",
+        "pass": true
+      },
+      {
+        "name": "pause releases fire and ADS",
+        "pass": true
+      },
+      {
+        "name": "resume restores weapon",
+        "pass": true
+      },
+      {
+        "name": "auto reduces quality under sustained load",
+        "pass": true
+      }
+    ],
+    "batchStats": {
+      "before": 334,
+      "after": 47
+    },
+    "coarse": true,
+    "scale": 0.85,
+    "drawCalls": 73,
+    "layout": {
+      "inside": true,
+      "sized": true,
+      "scroll": true,
+      "overlap": false,
+      "hudClear": true
+    }
+  }
+]

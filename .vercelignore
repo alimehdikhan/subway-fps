@@ -1,0 +1,10 @@
+.env*
+.playwright-cli
+tools
+tests
+*.png
+README.md
+tests-results.json
+shots
+/*.glb
+/gun sound
