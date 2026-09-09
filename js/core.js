@@ -429,6 +429,7 @@ function renderVolume(){
   if(!volTarget || !postActive || !aoEnabled || typeof FIXTURES === 'undefined') return false;
   volScratch.length = 0;
   for(var i = 0; i < FIXTURES.length; i++){
+    if(typeof FIXTURE_DEAD !== 'undefined' && FIXTURE_DEAD[i]) continue;
     var f = FIXTURES[i];
     var dx = f[0] - camera.position.x, dz = f[2] - camera.position.z;
     volScratch.push([dx * dx + dz * dz, f]);

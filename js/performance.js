@@ -71,7 +71,8 @@ function setQualityTier(tier){
     wetReflectionRT.texture.encoding=postActive?THREE.LinearEncoding:THREE.sRGBEncoding;
   dustPoints.visible=qualityTier>0;
   // Performance drops the volumetric cones and runs two fixture lights instead of three.
-  if(typeof cones!=='undefined')for(var ci=0;ci<cones.length;ci++)cones[ci].visible=qualityTier>0;
+  if(typeof cones!=='undefined')for(var ci=0;ci<cones.length;ci++)
+    cones[ci].visible=qualityTier>0&&!(typeof FIXTURE_DEAD!=='undefined'&&FIXTURE_DEAD[ci]);
   if(typeof poolActive!=='undefined'){poolActive=qualityTier>0?3:2;lightAnchorX=Infinity;}
   setRenderScale(q.scale);
 }
