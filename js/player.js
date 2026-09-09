@@ -223,6 +223,11 @@ function shoot(){
       var radius=Math.sqrt(Math.random())*spread*.5,angle=Math.random()*TAU;
       var f=forward(shotYaw+Math.cos(angle)*radius,shotPitch+Math.sin(angle)*radius);
       var dist=rayWorld(ox,oy,oz,f[0],f[1],f[2]),target=null,zone='body',targetBarrel=null;
+      var lampHit=-1;
+      if(typeof rayLamp==='function'){
+        var lh=rayLamp(ox,oy,oz,f[0],f[1],f[2]);
+        if(lh.t<dist){dist=lh.t;lampHit=lh.i;}
+      }
       for(var bi=0;bi<barrels.length;bi++){
         var bObj=barrels[bi];
         if(bObj.alive){
@@ -238,8 +243,11 @@ function shoot(){
         var t=Math.min(th,tb,tl);
         if(t<dist){dist=t;target=e;targetBarrel=null;zone=(t===th)?'head':(t===tb?'body':'legs');}
       }
+      /* anything nearer than the tube wins it back */
+      if(target||targetBarrel)lampHit=-1;
       var hx=ox+f[0]*dist,hy=oy+f[1]*dist,hz=oz+f[2]*dist;
-      if(!target&&!targetBarrel&&dist<200)surfaceImpact(hx,hy,hz,cur);
+      if(lampHit>=0)breakLamp(lampHit);
+      else if(!target&&!targetBarrel&&dist<200)surfaceImpact(hx,hy,hz,cur);
       var mx=ox+f[0]*0.6+Math.cos(shotYaw)*0.12*(1-P.ads);
       var my=oy-0.14+P.ads*0.08;
       var mz=oz+f[2]*0.6-Math.sin(shotYaw)*0.12*(1-P.ads);
@@ -955,11 +963,14 @@ P.barrelHeat=Math.max(0,P.barrelHeat-dt*0.18);
       var fAim=forward(P.yaw,P.pitch);
       var hitD=P.aimDistance||200;
       laserDot.position.copy(camera.position).addScaledVector(aimVector,Math.max(0,hitD-0.04));
-      laserDot.visible=true;
+      laserDot.visible=gunRig.visible;
       laserDot.material.opacity=lerp(0.85,0.12,ads);
       laserDot.scale.setScalar(0.045+Math.sin(G.time*15)*0.006);
       if(P.curWpn===3)laserDot.material.color.setHex(0x00ffff);
       else laserDot.material.color.setHex(0x00ff88);
+      /* a laser dot is a genuine emitter, so in the float buffer it is allowed past 1 and blooms
+         like one instead of sitting at the level of a lit tile */
+      laserDot.material.color.multiplyScalar(2.4);
 
       if(laserBeam){
         var startX=P.x+fAim[0]*0.45,startY=P.y+1.55+fAim[1]*0.45,startZ=P.z+fAim[2]*0.45;
@@ -969,8 +980,15 @@ P.barrelHeat=Math.max(0,P.barrelHeat-dt*0.18);
         var bDir=_laserFrom.set(endX-startX,endY-startY,endZ-startZ).normalize();
         laserBeam.quaternion.setFromUnitVectors(_laserUp,bDir);
         laserBeam.scale.set(1,beamLen,1);
-        laserBeam.visible=qualityTier>0&&ads<0.5;
-        laserBeam.material.opacity=lerp(0.20,0.04,ads);
+        /* The beam leaves from just under the eye and runs straight down the aim, so from behind
+           the gun it is end-on and projects to a green dash sitting on the crosshair. A beam is
+           only ever visible side-on, where the haze it lights is off the line of sight, so fade it
+           by how across the view it actually lies: looking down your own laser you see the dot and
+           nothing else, and the line only shows as the muzzle swings off your eye line. */
+        var sideOn=1.0-Math.abs(bDir.x*aimVector.x+bDir.y*aimVector.y+bDir.z*aimVector.z);
+        var beamFade=clamp(sideOn*9.0,0,1);
+        laserBeam.visible=qualityTier>0&&ads<0.5&&gunRig.visible&&beamFade>0.01;
+        laserBeam.material.opacity=lerp(0.20,0.04,ads)*beamFade;
         laserBeam.material.color.copy(laserDot.material.color);
       }
     }else{
