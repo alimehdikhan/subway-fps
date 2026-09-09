@@ -1040,7 +1040,9 @@ function shotMuzzle(){
 }
 /* Muzzle flash: a petal-shaped flash (two variants swapped per shot) inside a soft halo. It
    shrinks when aiming so it never sits over the target. */
-var flash=new THREE.Sprite(new THREE.SpriteMaterial({map:TX.flash,color:0xffcf88,transparent:true,
+/* the flash is the brightest thing that ever happens in the station; in a linear float buffer it
+   can finally say so, and it is what the bloom threshold at 1.02 is there to catch */
+var flash=new THREE.Sprite(new THREE.SpriteMaterial({map:TX.flash,color:new THREE.Color(0xffcf88).multiplyScalar(5.0),transparent:true,
   blending:THREE.AdditiveBlending,depthWrite:false,opacity:0}));
 flash.position.set(0,0.024,-0.70);flash.scale.set(0.12,0.12,1);gunRig.add(flash);
 var flashHalo=new THREE.Sprite(new THREE.SpriteMaterial({map:TX.glow,color:0xffb060,transparent:true,
@@ -1316,7 +1318,7 @@ function updatePuffs(dt){
 var BLAST_MAX=6,blastPool=[],blastHead=0;
 var ringFlatGeo=new THREE.PlaneGeometry(1,1);ringFlatGeo.rotateX(-Math.PI/2);
 for(var bfi=0;bfi<BLAST_MAX;bfi++){
-  var fire=new THREE.Sprite(new THREE.SpriteMaterial({map:TX.flash,color:0xffc070,transparent:true,blending:THREE.AdditiveBlending,depthWrite:false,opacity:0}));
+  var fire=new THREE.Sprite(new THREE.SpriteMaterial({map:TX.flash,color:new THREE.Color(0xffc070).multiplyScalar(4.2),transparent:true,blending:THREE.AdditiveBlending,depthWrite:false,opacity:0}));
   var ringFlat=new THREE.Mesh(ringFlatGeo,new THREE.MeshBasicMaterial({map:TX.ring,color:0xffb070,transparent:true,blending:THREE.AdditiveBlending,depthWrite:false,side:THREE.DoubleSide,opacity:0}));
   var ringSprite=new THREE.Sprite(new THREE.SpriteMaterial({map:TX.ring,color:0x7af4ff,transparent:true,blending:THREE.AdditiveBlending,depthWrite:false,opacity:0}));
   fire.visible=ringFlat.visible=ringSprite.visible=false;scene.add(fire);scene.add(ringFlat);scene.add(ringSprite);
