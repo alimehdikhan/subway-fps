@@ -103,7 +103,7 @@ try {
    two separable blurs spread them, and the composite adds that glow back with a light vignette.
    No chromatic aberration, depth of field or motion blur: they cost clarity in a shooter. */
 var postEnabled = true;
-var postTarget = null, bloomA = null, bloomB = null;
+var postTarget = null, bloomA = null, bloomB = null, bloomC = null, bloomD = null;
 try {
   /* Half float, and linear. The scene used to resolve into an 8-bit sRGB target, which meant
      tone mapping and the sRGB transfer both happened inside the scene pass and everything was
@@ -115,7 +115,9 @@ try {
   var rtOpts = { minFilter: THREE.LinearFilter, magFilter: THREE.LinearFilter, format: THREE.RGBAFormat, type: hdrType, depthBuffer: true, stencilBuffer: false };
   if (!coarse && renderer.capabilities.isWebGL2 && THREE.WebGLMultisampleRenderTarget) {
     postTarget = new THREE.WebGLMultisampleRenderTarget(1, 1, rtOpts);
-    postTarget.samples = 2;
+    /* r128's own default is 4 and this was explicitly halved; the device reports 16 available.
+       Edges are the one thing no amount of post can put back, so pay for them here. */
+    postTarget.samples = 4;
   } else {
     postTarget = new THREE.WebGLRenderTarget(1, 1, rtOpts);
   }
@@ -125,7 +127,12 @@ try {
   var bloomOpts = { minFilter: THREE.LinearFilter, magFilter: THREE.LinearFilter, format: THREE.RGBAFormat, type: hdrType, depthBuffer: false, stencilBuffer: false };
   bloomA = new THREE.WebGLRenderTarget(1, 1, bloomOpts);
   bloomB = new THREE.WebGLRenderTarget(1, 1, bloomOpts);
-} catch(e) { postEnabled = false; postTarget = null; bloomA = bloomB = null; }
+  /* A single blur radius gives one hard ring around a light. Real glow is a bright tight core
+     sitting inside a wide soft skirt, so the tight result is taken down to a sixteenth and blurred
+     again, and the composite adds both. */
+  bloomC = new THREE.WebGLRenderTarget(1, 1, bloomOpts);
+  bloomD = new THREE.WebGLRenderTarget(1, 1, bloomOpts);
+} catch(e) { postEnabled = false; postTarget = null; bloomA = bloomB = bloomC = bloomD = null; }
 
 var postCam = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
 var postScene = new THREE.Scene();
@@ -173,8 +180,10 @@ var postMat = new THREE.ShaderMaterial({
   uniforms: {
     tDiffuse: { value: null },
     tBloom: { value: null },
+    tBloomWide: { value: null },
     tAO: { value: null },
-    uBloom: { value: 0.62 },
+    uBloom: { value: 0.52 },
+    uBloomWide: { value: 0.40 },
     uAO: { value: 0.0 },
     uSharpen: { value: 0.34 },
     uGrain: { value: 0.011 },
@@ -189,9 +198,9 @@ var postMat = new THREE.ShaderMaterial({
   },
   vertexShader: POST_VS,
   fragmentShader: [
-    'uniform sampler2D tDiffuse; uniform sampler2D tBloom; uniform sampler2D tAO;',
+    'uniform sampler2D tDiffuse; uniform sampler2D tBloom; uniform sampler2D tBloomWide; uniform sampler2D tAO;',
     'uniform sampler2D tVolume;',
-    'uniform float uBloom; uniform float uAO; uniform float uSharpen; uniform float uGrain;',
+    'uniform float uBloom; uniform float uBloomWide; uniform float uAO; uniform float uSharpen; uniform float uGrain;',
     'uniform float uVolume; uniform float uSat; uniform float uContrast; uniform float uSCurve;',
     'uniform float uExposure; uniform float uTime; uniform vec2 uResolution; varying vec2 vUv;',
     '/* three.js ACES, lifted so it can run here at the end instead of inside the scene pass */',
@@ -220,7 +229,8 @@ var postMat = new THREE.ShaderMaterial({
     '  float ao = mix(1.0, texture2D(tAO, vUv).r, uAO);',
     '  float lum = max(hdr.r, max(hdr.g, hdr.b));',
     '  vec3 base = hdr * mix(ao, 1.0, smoothstep(0.70, 2.00, lum));',
-    '  vec3 lit = base + texture2D(tBloom, vUv).rgb * uBloom;',
+    '  /* tight core plus wide skirt, both in linear light */',
+    '  vec3 lit = base + texture2D(tBloom, vUv).rgb * uBloom + texture2D(tBloomWide, vUv).rgb * uBloomWide;',
     '  /* Lit haze. It is added, never multiplied: air in a light beam emits toward the eye, it',
     '     does not tint what is behind it. Occlusion is already in the march, so a beam stops at',
     '     the first surface it meets instead of glowing through a pillar. */',
@@ -291,6 +301,10 @@ for (var aoI = 0; aoI < AO_SAMPLES; aoI++) {
 var aoWhite = new THREE.DataTexture(new Uint8Array([255, 255, 255, 255]), 1, 1, THREE.RGBAFormat);
 aoWhite.needsUpdate = true;
 postMat.uniforms.tAO.value = aoWhite;
+var bloomBlack = new THREE.DataTexture(new Uint8Array([0, 0, 0, 255]), 1, 1, THREE.RGBAFormat);
+bloomBlack.needsUpdate = true;
+postMat.uniforms.tBloom.value = bloomBlack;
+postMat.uniforms.tBloomWide.value = bloomBlack;
 var volBlack = new THREE.DataTexture(new Uint8Array([0, 0, 0, 255]), 1, 1, THREE.RGBAFormat);
 volBlack.needsUpdate = true;
 try {
@@ -447,12 +461,12 @@ function renderVolume(){
   volMat.uniforms.uRes.value.set(volTarget.width, volTarget.height);
   volMat.uniforms.uTime.value = (volMat.uniforms.uTime.value + 1.0) % 1000.0;
   postMesh.material = volMat;
-  renderer.setRenderTarget(volTarget); renderer.clear(); renderer.render(postScene, postCam);
+  renderer.setRenderTarget(volTarget); renderer.render(postScene, postCam);
   postMesh.material = blurMat;
   blurMat.uniforms.tDiffuse.value = volTarget.texture; blurMat.uniforms.uDir.value.set(1 / volTarget.width, 0);
-  renderer.setRenderTarget(volBlurTarget); renderer.clear(); renderer.render(postScene, postCam);
+  renderer.setRenderTarget(volBlurTarget); renderer.render(postScene, postCam);
   blurMat.uniforms.tDiffuse.value = volBlurTarget.texture; blurMat.uniforms.uDir.value.set(0, 1 / volTarget.height);
-  renderer.setRenderTarget(volTarget); renderer.clear(); renderer.render(postScene, postCam);
+  renderer.setRenderTarget(volTarget); renderer.render(postScene, postCam);
   postMat.uniforms.tVolume.value = volTarget.texture;
   postMat.uniforms.uVolume.value = VOL_AMOUNT;
   return true;
@@ -494,12 +508,12 @@ function renderAO(){
   ssaoMat.uniforms.uProjInv.value.copy(camera.projectionMatrixInverse);
   ssaoMat.uniforms.uRes.value.set(aoTarget.width, aoTarget.height);
   postMesh.material = ssaoMat;
-  renderer.setRenderTarget(aoTarget); renderer.clear(); renderer.render(postScene, postCam);
+  renderer.setRenderTarget(aoTarget); renderer.render(postScene, postCam);
   postMesh.material = blurMat;
   blurMat.uniforms.tDiffuse.value = aoTarget.texture; blurMat.uniforms.uDir.value.set(1 / aoTarget.width, 0);
-  renderer.setRenderTarget(aoBlurTarget); renderer.clear(); renderer.render(postScene, postCam);
+  renderer.setRenderTarget(aoBlurTarget); renderer.render(postScene, postCam);
   blurMat.uniforms.tDiffuse.value = aoBlurTarget.texture; blurMat.uniforms.uDir.value.set(0, 1 / aoTarget.height);
-  renderer.setRenderTarget(aoTarget); renderer.clear(); renderer.render(postScene, postCam);
+  renderer.setRenderTarget(aoTarget); renderer.render(postScene, postCam);
   postMat.uniforms.tAO.value = aoTarget.texture;
   postMat.uniforms.uAO.value = AO_AMOUNT;
   return true;
@@ -515,6 +529,8 @@ function resizePost(w, h) {
   brightMat.uniforms.uTexel.value.set(1 / w, 1 / h);
   var bw = postActive ? Math.max(1, Math.floor(w / 4)) : 1, bh = postActive ? Math.max(1, Math.floor(h / 4)) : 1;
   if (bloomA && (bloomA.width !== bw || bloomA.height !== bh)) { bloomA.setSize(bw, bh); bloomB.setSize(bw, bh); }
+  var cw = postActive ? Math.max(1, Math.floor(w / 16)) : 1, ch = postActive ? Math.max(1, Math.floor(h / 16)) : 1;
+  if (bloomC && (bloomC.width !== cw || bloomC.height !== ch)) { bloomC.setSize(cw, ch); bloomD.setSize(cw, ch); }
   var aw = postActive ? Math.max(1, Math.floor(w / 2)) : 1, ah = postActive ? Math.max(1, Math.floor(h / 2)) : 1;
   if (aoTarget && (aoTarget.width !== aw || aoTarget.height !== ah)) {
     aoTarget.setSize(aw, ah); aoBlurTarget.setSize(aw, ah); aoDepthTarget.setSize(aw, ah);
@@ -526,20 +542,36 @@ function resizePost(w, h) {
 /* run after the scene and view model have been rendered into postTarget */
 function renderPost() {
   if (!postTarget) return;
+  /* None of these passes clear: each draws one full-screen quad with depthTest and depthWrite off
+     and an opaque write, so it covers every texel of its target anyway. */
   if (bloomA) {
     var bw = bloomA.width, bh = bloomA.height;
     postMesh.material = brightMat; brightMat.uniforms.tDiffuse.value = postTarget.texture;
-    renderer.setRenderTarget(bloomA); renderer.clear(); renderer.render(postScene, postCam);
+    renderer.setRenderTarget(bloomA); renderer.render(postScene, postCam);
     postMesh.material = blurMat;
     for (var pass = 0; pass < 2; pass++) {
       blurMat.uniforms.tDiffuse.value = bloomA.texture; blurMat.uniforms.uDir.value.set(1 / bw, 0);
-      renderer.setRenderTarget(bloomB); renderer.clear(); renderer.render(postScene, postCam);
+      renderer.setRenderTarget(bloomB); renderer.render(postScene, postCam);
       blurMat.uniforms.tDiffuse.value = bloomB.texture; blurMat.uniforms.uDir.value.set(0, 1 / bh);
-      renderer.setRenderTarget(bloomA); renderer.clear(); renderer.render(postScene, postCam);
+      renderer.setRenderTarget(bloomA); renderer.render(postScene, postCam);
     }
     postMat.uniforms.tBloom.value = bloomA.texture;
+    if (bloomC) {
+      /* the wide skirt: the tight result taken down to a sixteenth and blurred twice more, the
+         second pass at a longer step so the halo reaches well past the light that made it */
+      var cw2 = bloomC.width, ch2 = bloomC.height;
+      blurMat.uniforms.tDiffuse.value = bloomA.texture; blurMat.uniforms.uDir.value.set(1 / cw2, 0);
+      renderer.setRenderTarget(bloomC); renderer.render(postScene, postCam);
+      blurMat.uniforms.tDiffuse.value = bloomC.texture; blurMat.uniforms.uDir.value.set(0, 1 / ch2);
+      renderer.setRenderTarget(bloomD); renderer.render(postScene, postCam);
+      blurMat.uniforms.tDiffuse.value = bloomD.texture; blurMat.uniforms.uDir.value.set(1.7 / cw2, 0);
+      renderer.setRenderTarget(bloomC); renderer.render(postScene, postCam);
+      blurMat.uniforms.tDiffuse.value = bloomC.texture; blurMat.uniforms.uDir.value.set(0, 1.7 / ch2);
+      renderer.setRenderTarget(bloomD); renderer.render(postScene, postCam);
+      postMat.uniforms.tBloomWide.value = bloomD.texture;
+    }
   }
   postMat.uniforms.uTime.value = (postMat.uniforms.uTime.value + 1.0) % 1000.0;
   postMesh.material = postMat; postMat.uniforms.tDiffuse.value = postTarget.texture;
-  renderer.setRenderTarget(null); renderer.clear(); renderer.render(postScene, postCam);
+  renderer.setRenderTarget(null); renderer.render(postScene, postCam);
 }
