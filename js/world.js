@@ -508,20 +508,27 @@ scene.add(new THREE.AmbientLight(0x151f24,0.28));
 var hemi=new THREE.HemisphereLight(0x8ea2b0,0x161e22,0.38);scene.add(hemi);
 
 /* Overhead key that follows the player and casts the only real-time shadows */
-var sunKey=new THREE.DirectionalLight(0xdce8f2,0.58);
-sunKey.position.set(-6,8,2);
+/* 0.58 was set while this light was reaching nothing: it sat above the ceiling slab, so every
+   surface below was in its shadow and only ambient and the bake were lighting the room. Now that
+   it actually lands, it is dialled back to sit alongside the baked light rather than double it. */
+var sunKey=new THREE.DirectionalLight(0xdce8f2,0.30);
+sunKey.position.set(-6,5.0,2);
 sunKey.castShadow=true;
 sunKey.shadow.mapSize.width=coarse?1024:2048;
 sunKey.shadow.mapSize.height=coarse?1024:2048;
 sunKey.shadow.camera.near=0.5;
-sunKey.shadow.camera.far=40;
-sunKey.shadow.camera.left=-16;
-sunKey.shadow.camera.right=16;
-sunKey.shadow.camera.top=16;
-sunKey.shadow.camera.bottom=-16;
+sunKey.shadow.camera.far=16;
+sunKey.shadow.camera.left=-12;
+sunKey.shadow.camera.right=12;
+sunKey.shadow.camera.top=12;
+sunKey.shadow.camera.bottom=-12;
 sunKey.shadow.bias=-0.0004;
 sunKey.shadow.normalBias=0.038;
-sunKey.shadow.radius=2.5;
+/* r128's LightShadow.updateMatrices never calls updateProjectionMatrix, and only the spot and
+   point subclasses do it themselves, so every frustum value above was inert and the shadow camera
+   stayed at DirectionalLightShadow's default 10x10 box with a 0.5-500 depth range. One call makes
+   the numbers real; a range that tight is also what gives 2048 texels something to spend. */
+sunKey.shadow.camera.updateProjectionMatrix();
 scene.add(sunKey);
 
 var poolCount=3,pool=[],POOL_INTENSITY=[2.3,1.7,1.3],POOL_COLORS=[0xe4eff7,0xdfecf5,0xe8f0f6],poolActive=coarse?2:3;
@@ -537,7 +544,8 @@ function updateLights(px,pz){
   // Fixture selection only changes as the player moves, never randomly per frame.
   if(Math.hypot(px-lightAnchorX,pz-lightAnchorZ)<1.5)return;
   lightAnchorX=px;lightAnchorZ=pz;
-  sunKey.position.set(px-1.5,9,pz+2.5);
+  /* under the ceiling slab (y 5.45-5.79), or it shadows the whole station with the roof */
+  sunKey.position.set(px-1.5,5.0,pz+2.5);
   sunKey.target.position.set(px,0,pz-1);
   sunKey.target.updateMatrixWorld();
   var best=[];

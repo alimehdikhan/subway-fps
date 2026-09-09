@@ -103,7 +103,12 @@ hazardPayloadMat.envMapIntensity=.35;hazardPayloadMat.userData.envSet=true;
 function makeEnemy(type,x,z){
   var cfg=TYPES[type],g=new THREE.Group(),skin=own(shellMat.clone());
   function b(px,py,pz,sx,sy,sz,m,parent){
-    var mesh=new THREE.Mesh(bg(sx,sy,sz),m||skin);mesh.position.set(px,py,pz);(parent||g).add(mesh);return mesh;
+    var mesh=new THREE.Mesh(bg(sx,sy,sz),m||skin);mesh.position.set(px,py,pz);
+    /* The units are the only articulated things in the station and cast nothing at all today.
+       The shells cast and receive; the unlit eye, core and shield quads are skipped, since a
+       MeshBasicMaterial has no light to lose and would only throw a solid black cut-out. */
+    if(!(mesh.material&&mesh.material.isMeshBasicMaterial)){mesh.castShadow=true;mesh.receiveShadow=true;}
+    (parent||g).add(mesh);return mesh;
   }
   var hipL=new THREE.Group(),hipR=new THREE.Group();
   hipL.position.set(-0.19,0.78,0);hipR.position.set(0.19,0.78,0);g.add(hipL,hipR);
