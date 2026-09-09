@@ -57,6 +57,18 @@ function setQualityTier(tier){
   renderer.shadowMap.enabled=q.shadows;
   renderer.shadowMap.autoUpdate=true;renderer.shadowMap.needsUpdate=true;
   postActive=q.post&&postEnabled&&!!postTarget;
+  /* Post owns the tone map now, so the renderer must NOT also apply one when it is on, and the
+     two colours three mixes in after the encoding chunk - the clear and the fog - have to follow
+     the buffer they land in: linear while the scene resolves to the HDR target, display-referred
+     while it goes straight to the canvas. */
+  renderer.toneMapping=postActive?THREE.NoToneMapping:THREE.ACESFilmicToneMapping;
+  if(postTarget)postTarget.texture.encoding=postActive?THREE.LinearEncoding:THREE.sRGBEncoding;
+  scene.fog.color.setHex(0x101c22);
+  var clearCol=new THREE.Color(0x060c0f);
+  if(postActive){scene.fog.color.convertSRGBToLinear();clearCol.convertSRGBToLinear();}
+  renderer.setClearColor(clearCol,1);
+  if(typeof wetReflectionRT!=='undefined'&&wetReflectionRT)
+    wetReflectionRT.texture.encoding=postActive?THREE.LinearEncoding:THREE.sRGBEncoding;
   dustPoints.visible=qualityTier>0;
   // Performance drops the volumetric cones and runs two fixture lights instead of three.
   if(typeof cones!=='undefined')for(var ci=0;ci<cones.length;ci++)cones[ci].visible=qualityTier>0;
@@ -80,9 +92,24 @@ function adaptQuality(dt){
     if(qualityTier>0)setQualityTier(qualityTier-1);
     else if(renderScale>0.6)setRenderScale(Math.max(0.6,renderScale-0.1));
     qualitySlow=qualityFast=0;qualityWarmup=3;
-  }else if(qualityFast>15&&renderScale<QUALITY[qualityTier].scale){
-    setRenderScale(Math.min(QUALITY[qualityTier].scale,renderScale+0.05));
-    qualityFast=0;qualityWarmup=3;
+  }else if(qualityFast>15){
+    /* Auto used to be a one-way trip down: the only tier change was a step DOWN, so a machine
+       that could afford Ultra never reached it and post never switched on, which meant no bloom,
+       no occlusion, no lit haze, no grade and no wet reflections for anyone who never opened the
+       settings drawer.
+       Raise the render scale first, and only climb a tier once it will not go any higher. That
+       ceiling cannot be read off QUALITY[].scale: setRenderScale also clamps to the device pixel
+       ratio and to a total pixel budget, so on a 1x display the scale sits at 1 while the tier
+       asks for 1.25 and the comparison would never come true. Ask by trying, and treat "the call
+       changed nothing" as the ceiling. The tier waits on a longer fuse than the scale (25 s
+       against 15 s) so the two cannot chase each other. */
+    var scaleBefore=renderScale;
+    if(renderScale<QUALITY[qualityTier].scale)setRenderScale(Math.min(QUALITY[qualityTier].scale,renderScale+0.05));
+    if(renderScale>scaleBefore){qualityFast=0;qualityWarmup=3;}
+    else if(qualityFast>25&&qualityTier<2){
+      setQualityTier(qualityTier+1);
+      qualitySlow=qualityFast=0;qualityWarmup=3;
+    }
   }
 }
 batchStation();
