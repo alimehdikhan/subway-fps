@@ -77,6 +77,9 @@ function pipe(x,y,z,r,len,material,axis,parent){
 function plane(x,y,z,w,d,material,rx,ry,rz){
   var g=new THREE.PlaneGeometry(w,d);g.setAttribute('uv2',g.attributes.uv);
   var m=new THREE.Mesh(g,material);
+  /* the ballast bed, the tactile strip and the worn paint line are all planes, and none of them
+     took a real-time shadow before: only floorMesh was patched afterwards */
+  m.receiveShadow=true;
   m.position.set(x,y,z);m.rotation.set(rx||0,ry||0,rz||0);world.add(m);return m;
 }
 function sign(x,y,z,w,h,tex,ry){
@@ -188,6 +191,12 @@ for(var lz=Z0+5;lz<Z1;lz+=7){
   add(-6,5.18,lz,0.78,0.14,3.06,M.paint);
   add(-6,5.12,lz-1.5,0.7,0.1,0.06,M.metalLong);add(-6,5.12,lz+1.5,0.7,0.1,0.06,M.metalLong);
   var lampMesh=add(-6,5.105,lz,0.6,0.03,2.76,isFlicker?M.lamp.clone():M.lamp);
+  /* Keep every diffuser out of batchStation. It merges same-material static meshes into one and
+     removes the originals, so a batched tube cannot be turned off on its own: swapping its
+     material would recolour an object that is no longer in the scene, which is why a shot tube
+     used to drop its glass and its beam and stay lit. Twenty-four extra draw calls buys the
+     ability to put them out one at a time. */
+  lampMesh.userData.stationStatic=false;
   var g1=glow(-6,5.0,lz,2.4,0xe6f0ff,0.16);
   FIXTURES.push([-6,4.9,lz]);
   var cone=new THREE.Mesh(coneGeo,isFlicker?coneMat.clone():coneMat);
@@ -197,6 +206,7 @@ for(var lz=Z0+5;lz<Z1;lz+=7){
     min:[-6.42,4.98,lz-1.60],max:[-5.58,5.30,lz+1.60]});
   add(3,5.2,lz+3.5,0.42,0.12,1.8,M.paint);
   var lamp2=add(3,5.125,lz+3.5,0.3,0.03,1.6,M.lamp);
+  lamp2.userData.stationStatic=false;
   var glow2=glow(3,5.08,lz+3.5,2.2,0xe6f0ff,0.2);
   LAMPS.push({x:3,y:5.14,z:lz+3.5,mesh:lamp2,glow:glow2,cone:null,fixture:-1,broken:false,
     min:[2.72,4.98,lz+3.5-0.95],max:[3.28,5.30,lz+3.5+0.95]});
