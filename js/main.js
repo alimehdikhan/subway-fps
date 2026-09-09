@@ -62,9 +62,14 @@ function frame(now){
   if(typeof updateViewModelLight==='function')updateViewModelLight(dt);
   renderer.info.autoReset=false;renderer.info.reset();
   if(typeof renderWetReflections==='function')renderWetReflections(dt);
+  if(postActive&&typeof renderAODepth==='function')renderAODepth();
   renderer.setRenderTarget(postActive?postTarget:null);renderer.clear();renderer.render(scene,camera);
   if(G.state!=='menu'&&gunRig.visible){renderer.clearDepth();renderer.render(gunScene,gunCam);}
-  if(postActive)renderPost();
+  if(postActive){
+    if(typeof renderAO==='function')renderAO();
+    if(typeof renderVolume==='function')renderVolume();
+    renderPost();
+  }
 }
 window.captureFrame=function(){return canvas.toDataURL('image/png');};
 canvas.addEventListener('webglcontextlost',function(e){e.preventDefault();pause();$('failtext').textContent='The graphics context was interrupted. Reload to reconnect.';$('fail').hidden=false;});

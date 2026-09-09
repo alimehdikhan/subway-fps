@@ -105,7 +105,14 @@ try {
 var postEnabled = true;
 var postTarget = null, bloomA = null, bloomB = null;
 try {
-  var rtOpts = { minFilter: THREE.LinearFilter, magFilter: THREE.LinearFilter, format: THREE.RGBAFormat, depthBuffer: true, stencilBuffer: false };
+  /* Half float, and linear. The scene used to resolve into an 8-bit sRGB target, which meant
+     tone mapping and the sRGB transfer both happened inside the scene pass and everything was
+     clamped to 1.0 before anything downstream saw it: a 20x muzzle flash and a 1.05x tile were
+     the same number to the bloom threshold, which is why lamps smeared instead of glowing.
+     Now the scene keeps its full range, the bloom threshold means something in luminance, and
+     the tone map moves to the end of the composite where it belongs. */
+  var hdrType = renderer.capabilities.isWebGL2 ? THREE.HalfFloatType : THREE.UnsignedByteType;
+  var rtOpts = { minFilter: THREE.LinearFilter, magFilter: THREE.LinearFilter, format: THREE.RGBAFormat, type: hdrType, depthBuffer: true, stencilBuffer: false };
   if (!coarse && renderer.capabilities.isWebGL2 && THREE.WebGLMultisampleRenderTarget) {
     postTarget = new THREE.WebGLMultisampleRenderTarget(1, 1, rtOpts);
     postTarget.samples = 2;
@@ -113,8 +120,9 @@ try {
     postTarget = new THREE.WebGLRenderTarget(1, 1, rtOpts);
   }
   /* store display-referred colour so the threshold works on what the eye sees */
-  postTarget.texture.encoding = THREE.sRGBEncoding;
-  var bloomOpts = { minFilter: THREE.LinearFilter, magFilter: THREE.LinearFilter, format: THREE.RGBAFormat, depthBuffer: false, stencilBuffer: false };
+  postTarget.texture.encoding = THREE.LinearEncoding;
+  /* the bloom chain has to be float too, or the halo is re-clamped the moment it is thresholded */
+  var bloomOpts = { minFilter: THREE.LinearFilter, magFilter: THREE.LinearFilter, format: THREE.RGBAFormat, type: hdrType, depthBuffer: false, stencilBuffer: false };
   bloomA = new THREE.WebGLRenderTarget(1, 1, bloomOpts);
   bloomB = new THREE.WebGLRenderTarget(1, 1, bloomOpts);
 } catch(e) { postEnabled = false; postTarget = null; bloomA = bloomB = null; }
@@ -125,7 +133,7 @@ var postGeo = new THREE.PlaneGeometry(2, 2);
 var POST_VS = 'varying vec2 vUv;void main(){vUv=uv;gl_Position=vec4(position,1.0);}';
 /* threshold + 4x downsample: four bilinear taps cover the 4x4 source footprint of each bloom texel */
 var brightMat = new THREE.ShaderMaterial({
-  uniforms: { tDiffuse: { value: null }, uTexel: { value: new THREE.Vector2(1 / 1920, 1 / 1080) }, uThreshold: { value: 0.78 } },
+  uniforms: { tDiffuse: { value: null }, uTexel: { value: new THREE.Vector2(1 / 1920, 1 / 1080) }, uThreshold: { value: 1.02 } },
   vertexShader: POST_VS,
   fragmentShader: [
     'uniform sampler2D tDiffuse; uniform vec2 uTexel; uniform float uThreshold; varying vec2 vUv;',
@@ -165,16 +173,77 @@ var postMat = new THREE.ShaderMaterial({
   uniforms: {
     tDiffuse: { value: null },
     tBloom: { value: null },
-    uBloom: { value: 0.30 },
+    tAO: { value: null },
+    uBloom: { value: 0.62 },
+    uAO: { value: 0.0 },
+    uSharpen: { value: 0.34 },
+    uGrain: { value: 0.011 },
+    uTime: { value: 0.0 },
+    tVolume: { value: null },
+    uVolume: { value: 0.0 },
+    uExposure: { value: 0.98 },
+    uSat: { value: 1.14 },
+    uContrast: { value: 1.05 },
+    uSCurve: { value: 0.32 },
     uResolution: { value: new THREE.Vector2(window.innerWidth || 1920, window.innerHeight || 1080) }
   },
   vertexShader: POST_VS,
   fragmentShader: [
-    'uniform sampler2D tDiffuse; uniform sampler2D tBloom; uniform float uBloom; uniform vec2 uResolution; varying vec2 vUv;',
+    'uniform sampler2D tDiffuse; uniform sampler2D tBloom; uniform sampler2D tAO;',
+    'uniform sampler2D tVolume;',
+    'uniform float uBloom; uniform float uAO; uniform float uSharpen; uniform float uGrain;',
+    'uniform float uVolume; uniform float uSat; uniform float uContrast; uniform float uSCurve;',
+    'uniform float uExposure; uniform float uTime; uniform vec2 uResolution; varying vec2 vUv;',
+    '/* three.js ACES, lifted so it can run here at the end instead of inside the scene pass */',
+    'vec3 tonemap(vec3 c){',
+    '  c *= uExposure / 0.6;',
+    '  mat3 ACESIn  = mat3(0.59719, 0.07600, 0.02840, 0.35458, 0.90834, 0.13383, 0.04823, 0.01566, 0.83777);',
+    '  mat3 ACESOut = mat3(1.60475, -0.10208, -0.00327, -0.53108, 1.10813, -0.07276, -0.07367, -0.00605, 1.07602);',
+    '  c = ACESIn * c;',
+    '  vec3 a = c * (c + 0.0245786) - 0.000090537;',
+    '  vec3 b = c * (0.983729 * c + 0.4329510) + 0.238081;',
+    '  c = ACESOut * (a / b);',
+    '  return clamp(c, 0.0, 1.0);',
+    '}',
+    'vec3 encodeSRGB(vec3 v){',
+    '  return mix(pow(v, vec3(0.41666)) * 1.055 - 0.055, v * 12.92, vec3(lessThanEqual(v, vec3(0.0031308))));',
+    '}',
+    'vec3 display(vec3 hdr){ return encodeSRGB(tonemap(hdr)); }',
     'void main(){',
-    '  vec3 c = texture2D(tDiffuse, vUv).rgb;',
-    '  vec3 b = texture2D(tBloom, vUv).rgb;',
-    '  c += b * uBloom;',
+    '  /* Everything up to the tone map happens in linear light, which is the whole point of the',
+    '     HDR target: occlusion attenuates radiance, and the glow and the haze are energy added to',
+    '     it, not paint mixed into a picture of it. */',
+    '  vec3 hdr = texture2D(tDiffuse, vUv).rgb;',
+    '  /* Occlusion belongs to the ambient term, so it lands before the glow is added and is let',
+    '     go as a pixel gets bright: a lamp does not dim because it sits in a corner. Emitters now',
+    '     run well past 1.0, so the release is measured against that range rather than against 1. */',
+    '  float ao = mix(1.0, texture2D(tAO, vUv).r, uAO);',
+    '  float lum = max(hdr.r, max(hdr.g, hdr.b));',
+    '  vec3 base = hdr * mix(ao, 1.0, smoothstep(0.70, 2.00, lum));',
+    '  vec3 lit = base + texture2D(tBloom, vUv).rgb * uBloom;',
+    '  /* Lit haze. It is added, never multiplied: air in a light beam emits toward the eye, it',
+    '     does not tint what is behind it. Occlusion is already in the march, so a beam stops at',
+    '     the first surface it meets instead of glowing through a pillar. */',
+    '  lit += texture2D(tVolume, vUv).rgb * uVolume;',
+    '  vec3 c = display(lit);',
+    '  /* Unsharp mask against a four-tap cross, taken after the tone map so the amount keeps the',
+    '     meaning it was tuned with and a highlight cannot run away with it. It is measured on the',
+    '     surface only, with the glow and the haze left out, so it sharpens the station rather than',
+    '     the halo around a lamp. */',
+    '  vec2 px = 1.0 / uResolution;',
+    '  vec3 lo = display(texture2D(tDiffuse, vUv + vec2(px.x, 0.0)).rgb);',
+    '  lo += display(texture2D(tDiffuse, vUv - vec2(px.x, 0.0)).rgb);',
+    '  lo += display(texture2D(tDiffuse, vUv + vec2(0.0, px.y)).rgb);',
+    '  lo += display(texture2D(tDiffuse, vUv - vec2(0.0, px.y)).rgb);',
+    '  c += (display(base) - lo * 0.25) * uSharpen;',
+    '  /* Grade. Saturation, then a gamma, then a smoothstep S-curve for the toe and shoulder, then',
+    '     a split tone: the station reads cold, the sodium lamps and signage stay warm. */',
+    '  c = max(vec3(0.0), c);',
+    '  float gl = dot(c, vec3(0.2126, 0.7152, 0.0722));',
+    '  c = mix(vec3(gl), c, uSat);',
+    '  c = pow(c, vec3(uContrast));',
+    '  c = mix(c, c * c * (3.0 - 2.0 * c), uSCurve);',
+    '  c *= mix(vec3(0.84, 0.95, 1.12), vec3(1.08, 1.00, 0.90), smoothstep(0.0, 0.72, gl));',
     '  /* Aspect-ratio corrected subtle circular vignette */',
     '  float aspect = max(0.5, uResolution.x / max(1.0, uResolution.y));',
     '  vec2 vCenter = (vUv - 0.5) * vec2(min(1.35, aspect), 1.0);',
@@ -183,6 +252,11 @@ var postMat = new THREE.ShaderMaterial({
     '  vec3 shadowLift = vec3(0.003, 0.005, 0.007);',
     '  c = pow(c, vec3(0.97)) * 0.985 + shadowLift;',
     '  c *= mix(0.85, 1.0, vig);',
+    '  /* Sensor grain, weighted into the shadows the way a real one is: it breaks up the flat',
+    '     gradients the fog leaves down the tunnel, which otherwise band. */',
+    '  float gr = fract(sin(dot(vUv * uResolution + uTime, vec2(12.9898, 78.233))) * 43758.5453) - 0.5;',
+    '  float glum = max(c.r, max(c.g, c.b));',
+    '  c += gr * uGrain * (1.0 - 0.7 * clamp(glum, 0.0, 1.0));',
     '  gl_FragColor = vec4(c, 1.0);',
     '}'
   ].join('\n'),
@@ -191,6 +265,245 @@ var postMat = new THREE.ShaderMaterial({
 var postMesh = new THREE.Mesh(postGeo, postMat);
 postMesh.frustumCulled = false;
 postScene.add(postMesh);
+
+/* ============================ ambient occlusion (Ultra) ============================
+   The station's static surfaces already carry occlusion baked into their light maps by
+   bakeSurface, but nothing that moves does: enemies, gibs, the barrels and the view model all
+   meet the floor without darkening where they touch it, which is the plainest tell that an image
+   is synthetic. This adds it in screen space.
+   Depth comes from its own half-resolution prepass rather than from postTarget, because that
+   target is multisampled and a multisampled depth attachment cannot be sampled. Half resolution
+   is ample for a term that is blurred anyway, and the prepass writes depth only. View-space
+   normals are rebuilt from the derivatives of the reconstructed position, so there is no normal
+   buffer either. All of it is gated on post being active, which means Ultra. */
+var AO_SAMPLES = 12, AO_AMOUNT = 0.85;
+var aoEnabled = postEnabled, aoDepthTarget = null, aoTarget = null, aoBlurTarget = null, aoDepthMat = null;
+var aoKernel = [];
+for (var aoI = 0; aoI < AO_SAMPLES; aoI++) {
+  /* a golden-angle spiral over the hemisphere so the directions never clump, pulled in toward the
+     origin so most samples test the near contact rather than the far surroundings */
+  var aoA = aoI * 2.39996323, aoZ = (aoI + 0.5) / AO_SAMPLES, aoR = Math.sqrt(1 - aoZ * aoZ);
+  var aoV = new THREE.Vector3(Math.cos(aoA) * aoR, Math.sin(aoA) * aoR, aoZ);
+  aoV.multiplyScalar(0.15 + 0.85 * Math.pow((aoI + 1) / AO_SAMPLES, 2));
+  aoKernel.push(aoV);
+}
+/* a white stand-in, so the composite is neutral on any frame that has no occlusion to show */
+var aoWhite = new THREE.DataTexture(new Uint8Array([255, 255, 255, 255]), 1, 1, THREE.RGBAFormat);
+aoWhite.needsUpdate = true;
+postMat.uniforms.tAO.value = aoWhite;
+var volBlack = new THREE.DataTexture(new Uint8Array([0, 0, 0, 255]), 1, 1, THREE.RGBAFormat);
+volBlack.needsUpdate = true;
+try {
+  if (aoEnabled) {
+    var aoDepth = new THREE.DepthTexture(1, 1);
+    aoDepth.type = renderer.capabilities.isWebGL2 ? THREE.FloatType : THREE.UnsignedShortType;
+    aoDepth.minFilter = THREE.NearestFilter; aoDepth.magFilter = THREE.NearestFilter;
+    aoDepthTarget = new THREE.WebGLRenderTarget(1, 1, { minFilter: THREE.NearestFilter, magFilter: THREE.NearestFilter, format: THREE.RGBAFormat, depthBuffer: true, stencilBuffer: false });
+    aoDepthTarget.depthTexture = aoDepth;
+    var aoOpts = { minFilter: THREE.LinearFilter, magFilter: THREE.LinearFilter, format: THREE.RGBAFormat, depthBuffer: false, stencilBuffer: false };
+    aoTarget = new THREE.WebGLRenderTarget(1, 1, aoOpts);
+    aoBlurTarget = new THREE.WebGLRenderTarget(1, 1, aoOpts);
+    aoDepthMat = new THREE.MeshBasicMaterial({ colorWrite: false });
+  }
+} catch (e) { aoEnabled = false; }
+var ssaoMat = new THREE.ShaderMaterial({
+  defines: { AO_SAMPLES: AO_SAMPLES },
+  uniforms: {
+    tDepth: { value: null }, uProj: { value: new THREE.Matrix4() }, uProjInv: { value: new THREE.Matrix4() },
+    uKernel: { value: aoKernel }, uRes: { value: new THREE.Vector2(1, 1) },
+    uRadius: { value: 0.38 }, uBias: { value: 0.022 }, uStrength: { value: 1.0 }
+  },
+  vertexShader: POST_VS,
+  fragmentShader: [
+    'uniform sampler2D tDepth; uniform mat4 uProj; uniform mat4 uProjInv;',
+    'uniform vec3 uKernel[AO_SAMPLES]; uniform vec2 uRes;',
+    'uniform float uRadius; uniform float uBias; uniform float uStrength;',
+    'varying vec2 vUv;',
+    'vec3 viewPos(vec2 uv, float d){',
+    '  vec4 c = vec4(uv * 2.0 - 1.0, d * 2.0 - 1.0, 1.0);',
+    '  vec4 v = uProjInv * c;',
+    '  return v.xyz / v.w;',
+    '}',
+    'void main(){',
+    '  float d = texture2D(tDepth, vUv).x;',
+    '  if(d >= 0.9999){ gl_FragColor = vec4(1.0); return; }',
+    '  vec3 P = viewPos(vUv, d);',
+    '  vec3 N = normalize(cross(dFdx(P), dFdy(P)));',
+    '  float ang = fract(sin(dot(floor(vUv * uRes), vec2(12.9898, 78.233))) * 43758.5453) * 6.2831853;',
+    '  float ca = cos(ang), sa = sin(ang);',
+    '  float occ = 0.0;',
+    '  for(int i = 0; i < AO_SAMPLES; i++){',
+    '    vec3 k = uKernel[i];',
+    '    vec3 s = vec3(k.x * ca - k.y * sa, k.x * sa + k.y * ca, k.z);',
+    '    if(dot(s, N) < 0.0) s = -s;',
+    '    vec3 sp = P + s * uRadius;',
+    '    vec4 o = uProj * vec4(sp, 1.0);',
+    '    vec2 suv = (o.xy / o.w) * 0.5 + 0.5;',
+    '    if(suv.x < 0.0 || suv.x > 1.0 || suv.y < 0.0 || suv.y > 1.0) continue;',
+    '    vec3 sPos = viewPos(suv, texture2D(tDepth, suv).x);',
+    '    float range = smoothstep(0.0, 1.0, uRadius / max(1e-4, abs(P.z - sPos.z)));',
+    '    occ += step(sp.z + uBias, sPos.z) * range;',
+    '  }',
+    '  float ao = 1.0 - uStrength * occ / float(AO_SAMPLES);',
+    '  gl_FragColor = vec4(vec3(clamp(ao, 0.0, 1.0)), 1.0);',
+    '}'
+  ].join('\n'),
+  depthTest: false, depthWrite: false
+});
+ssaoMat.extensions.derivatives = true;
+
+/* ============================ lit haze (Ultra) ============================
+   The tunnel is dark, damp and full of strip lights, and until now the only thing standing in for
+   air was a pair of billboarded cones at 6% opacity and an exponential fog that tints but never
+   glows. This marches the volume properly. For each pixel it walks from the eye to whatever the
+   depth prepass says it hit, and at every step asks the nearest ceiling fixtures how much light
+   reaches that point in the air.
+   The lamps are strips behind a diffuser pointing straight down, so each is modelled as a cone
+   about its own downward axis rather than as a bare point: that is what makes a beam instead of a
+   ball of glow, and it is why this needs no shadow map, which is just as well because the only
+   shadow-casting light in the scene is the key, not the fixtures. Marching stops at scene depth,
+   so a beam is cut off by the pillar in front of it. The start of each ray is dithered per pixel
+   and the result is blurred, or sixteen steps would band into visible slices. */
+var VOL_STEPS = 16, VOL_LIGHTS = 4, VOL_AMOUNT = 1.0;
+var volTarget = null, volBlurTarget = null;
+var volLights = [];
+for (var vi = 0; vi < VOL_LIGHTS; vi++) volLights.push(new THREE.Vector4(0, -999, 0, 1));
+try {
+  if (aoEnabled) {
+    var volOpts = { minFilter: THREE.LinearFilter, magFilter: THREE.LinearFilter, format: THREE.RGBAFormat, type: (renderer.capabilities.isWebGL2 ? THREE.HalfFloatType : THREE.UnsignedByteType), depthBuffer: false, stencilBuffer: false };
+    volTarget = new THREE.WebGLRenderTarget(1, 1, volOpts);
+    volBlurTarget = new THREE.WebGLRenderTarget(1, 1, volOpts);
+  }
+} catch (e) { volTarget = null; }
+var volMat = new THREE.ShaderMaterial({
+  defines: { VOL_STEPS: VOL_STEPS, VOL_LIGHTS: VOL_LIGHTS },
+  uniforms: {
+    tDepth: { value: null }, uProjInv: { value: new THREE.Matrix4() }, uCamWorld: { value: new THREE.Matrix4() },
+    uLights: { value: volLights }, uColor: { value: new THREE.Color(0.62, 0.74, 0.92) },
+    uDensity: { value: 0.23 }, uConeCos: { value: 0.74 }, uFar: { value: 24.0 },
+    uRes: { value: new THREE.Vector2(1, 1) }, uTime: { value: 0 }
+  },
+  vertexShader: POST_VS,
+  fragmentShader: [
+    'uniform sampler2D tDepth; uniform mat4 uProjInv; uniform mat4 uCamWorld;',
+    'uniform vec4 uLights[VOL_LIGHTS]; uniform vec3 uColor;',
+    'uniform float uDensity; uniform float uConeCos; uniform float uFar; uniform float uTime;',
+    'uniform vec2 uRes; varying vec2 vUv;',
+    'void main(){',
+    '  float d = texture2D(tDepth, vUv).x;',
+    '  vec4 cp = vec4(vUv * 2.0 - 1.0, d * 2.0 - 1.0, 1.0);',
+    '  vec4 vp = uProjInv * cp; vp /= vp.w;',
+    '  vec3 world = (uCamWorld * vec4(vp.xyz, 1.0)).xyz;',
+    '  vec3 eye = uCamWorld[3].xyz;',
+    '  vec3 ray = world - eye;',
+    '  float dist = min(length(ray), uFar);',        /* never march past the useful range */
+    '  vec3 dir = normalize(ray);',
+    '  float stepLen = dist / float(VOL_STEPS);',
+    '  float dither = fract(sin(dot(vUv * uRes + uTime, vec2(12.9898, 78.233))) * 43758.5453);',
+    '  float acc = 0.0;',
+    '  for(int i = 0; i < VOL_STEPS; i++){',
+    '    float t = (float(i) + dither) * stepLen;',
+    '    vec3 p = eye + dir * t;',
+    '    for(int L = 0; L < VOL_LIGHTS; L++){',
+    '      vec4 lt = uLights[L];',
+    '      vec3 toP = p - lt.xyz;',
+    '      float dl = length(toP);',
+    '      if(dl > lt.w) continue;',
+    '      float down = clamp(-toP.y / max(dl, 1e-4), 0.0, 1.0);',   /* 1 directly beneath the strip */
+    '      float cone = smoothstep(uConeCos, 1.0, down);',
+    '      float atten = 1.0 - clamp(dl / lt.w, 0.0, 1.0);',
+    '      cone *= cone;',
+    '      acc += cone * atten * atten;',
+    '    }',
+    '  }',
+    '  /* fade the march out with range, or the far end of the platform sits under a sheet */',
+    '  acc *= uDensity * stepLen * (1.0 - 0.55 * clamp(dist / uFar, 0.0, 1.0));',
+    '  gl_FragColor = vec4(uColor * acc, 1.0);',
+    '}'
+  ].join('\n'),
+  depthTest: false, depthWrite: false
+});
+/* the four fixtures nearest the eye carry the beams; the rest are too far to read */
+var volScratch = [];
+function renderVolume(){
+  if(!volTarget || !postActive || !aoEnabled || typeof FIXTURES === 'undefined') return false;
+  volScratch.length = 0;
+  for(var i = 0; i < FIXTURES.length; i++){
+    var f = FIXTURES[i];
+    var dx = f[0] - camera.position.x, dz = f[2] - camera.position.z;
+    volScratch.push([dx * dx + dz * dz, f]);
+  }
+  volScratch.sort(function(a, b){ return a[0] - b[0]; });
+  for(var k = 0; k < VOL_LIGHTS; k++){
+    if(k < volScratch.length){
+      var p = volScratch[k][1];
+      volLights[k].set(p[0], p[1], p[2], 9.0);
+    } else volLights[k].set(0, -999, 0, 0.001);
+  }
+  volMat.uniforms.tDepth.value = aoDepthTarget.depthTexture;
+  volMat.uniforms.uProjInv.value.copy(camera.projectionMatrixInverse);
+  volMat.uniforms.uCamWorld.value.copy(camera.matrixWorld);
+  volMat.uniforms.uRes.value.set(volTarget.width, volTarget.height);
+  volMat.uniforms.uTime.value = (volMat.uniforms.uTime.value + 1.0) % 1000.0;
+  postMesh.material = volMat;
+  renderer.setRenderTarget(volTarget); renderer.clear(); renderer.render(postScene, postCam);
+  postMesh.material = blurMat;
+  blurMat.uniforms.tDiffuse.value = volTarget.texture; blurMat.uniforms.uDir.value.set(1 / volTarget.width, 0);
+  renderer.setRenderTarget(volBlurTarget); renderer.clear(); renderer.render(postScene, postCam);
+  blurMat.uniforms.tDiffuse.value = volBlurTarget.texture; blurMat.uniforms.uDir.value.set(0, 1 / volTarget.height);
+  renderer.setRenderTarget(volTarget); renderer.clear(); renderer.render(postScene, postCam);
+  postMat.uniforms.tVolume.value = volTarget.texture;
+  postMat.uniforms.uVolume.value = VOL_AMOUNT;
+  return true;
+}
+/* Particles, sprites and anything else transparent stay out of the depth prepass: the override
+   material would draw them solid and they would occlude the world behind them. */
+var aoHidden = [];
+function aoHideTransparent(){
+  aoHidden.length = 0;
+  scene.traverse(function(o){
+    if(!o.visible) return;
+    var m = o.material;
+    if(o.isPoints || o.isSprite || o.isLine || (m && (Array.isArray(m) ? (m[0] && m[0].transparent) : m.transparent))){
+      aoHidden.push(o); o.visible = false;
+    }
+  });
+}
+function aoRestoreTransparent(){
+  for(var i = 0; i < aoHidden.length; i++) aoHidden[i].visible = true;
+  aoHidden.length = 0;
+}
+/* depth only, from the camera the frame is about to be drawn with */
+function renderAODepth(){
+  if(!aoEnabled || !aoDepthTarget || !postActive) return false;
+  aoHideTransparent();
+  scene.overrideMaterial = aoDepthMat;
+  renderer.setRenderTarget(aoDepthTarget);
+  renderer.clear(true, true, false);
+  renderer.render(scene, camera);
+  scene.overrideMaterial = null;
+  aoRestoreTransparent();
+  return true;
+}
+/* occlusion, then a separable blur to take the sampling noise back out of it */
+function renderAO(){
+  if(!aoEnabled || !aoTarget || !postActive) return false;
+  ssaoMat.uniforms.tDepth.value = aoDepthTarget.depthTexture;
+  ssaoMat.uniforms.uProj.value.copy(camera.projectionMatrix);
+  ssaoMat.uniforms.uProjInv.value.copy(camera.projectionMatrixInverse);
+  ssaoMat.uniforms.uRes.value.set(aoTarget.width, aoTarget.height);
+  postMesh.material = ssaoMat;
+  renderer.setRenderTarget(aoTarget); renderer.clear(); renderer.render(postScene, postCam);
+  postMesh.material = blurMat;
+  blurMat.uniforms.tDiffuse.value = aoTarget.texture; blurMat.uniforms.uDir.value.set(1 / aoTarget.width, 0);
+  renderer.setRenderTarget(aoBlurTarget); renderer.clear(); renderer.render(postScene, postCam);
+  blurMat.uniforms.tDiffuse.value = aoBlurTarget.texture; blurMat.uniforms.uDir.value.set(0, 1 / aoTarget.height);
+  renderer.setRenderTarget(aoTarget); renderer.clear(); renderer.render(postScene, postCam);
+  postMat.uniforms.tAO.value = aoTarget.texture;
+  postMat.uniforms.uAO.value = AO_AMOUNT;
+  return true;
+}
+postMat.uniforms.tVolume.value = volBlack;
 /* post runs on Ultra; the frame loop switches it off if the device cannot keep up */
 var postActive = false;
 /* size the offscreen targets: full resolution for the scene, a quarter for the glow (1x1 when idle) */
@@ -201,6 +514,13 @@ function resizePost(w, h) {
   brightMat.uniforms.uTexel.value.set(1 / w, 1 / h);
   var bw = postActive ? Math.max(1, Math.floor(w / 4)) : 1, bh = postActive ? Math.max(1, Math.floor(h / 4)) : 1;
   if (bloomA && (bloomA.width !== bw || bloomA.height !== bh)) { bloomA.setSize(bw, bh); bloomB.setSize(bw, bh); }
+  var aw = postActive ? Math.max(1, Math.floor(w / 2)) : 1, ah = postActive ? Math.max(1, Math.floor(h / 2)) : 1;
+  if (aoTarget && (aoTarget.width !== aw || aoTarget.height !== ah)) {
+    aoTarget.setSize(aw, ah); aoBlurTarget.setSize(aw, ah); aoDepthTarget.setSize(aw, ah);
+  }
+  if (volTarget && (volTarget.width !== aw || volTarget.height !== ah)) {
+    volTarget.setSize(aw, ah); volBlurTarget.setSize(aw, ah);
+  }
 }
 /* run after the scene and view model have been rendered into postTarget */
 function renderPost() {
@@ -218,6 +538,7 @@ function renderPost() {
     }
     postMat.uniforms.tBloom.value = bloomA.texture;
   }
+  postMat.uniforms.uTime.value = (postMat.uniforms.uTime.value + 1.0) % 1000.0;
   postMesh.material = postMat; postMat.uniforms.tDiffuse.value = postTarget.texture;
   renderer.setRenderTarget(null); renderer.clear(); renderer.render(postScene, postCam);
 }
