@@ -1,4 +1,4 @@
-# Last Train — Northgate Station
+# Subway FPS
 
 [![Play Live Demo](https://img.shields.io/badge/Play%20Live-subwayfps.vercel.app-success?style=for-the-badge&logo=vercel)](https://subwayfps.vercel.app)
 
