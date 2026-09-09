@@ -329,7 +329,7 @@
     },
     "coarse": false,
     "scale": 1,
-    "drawCalls": 73
+    "drawCalls": 75
   },
   {
     "mobile": true,
@@ -661,7 +661,7 @@
     },
     "coarse": true,
     "scale": 0.85,
-    "drawCalls": 73,
+    "drawCalls": 75,
     "layout": {
       "inside": true,
       "sized": true,
