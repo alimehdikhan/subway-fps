@@ -1,7 +1,11 @@
 # Last Train — Northgate Station
 
+[![Play Live Demo](https://img.shields.io/badge/Play%20Live-subwayfps.vercel.app-success?style=for-the-badge&logo=vercel)](https://subwayfps.vercel.app)
+
+**Live Demo**: [https://subwayfps.vercel.app](https://subwayfps.vercel.app)
+
 A wave-survival first-person shooter set on a locked-down subway platform, built on three.js (r128)
-with no build step. Open `index.html` from any static server (or the Vercel deployment) and play.
+with no build step. Open `index.html` from any static server or play instantly in your browser at [subwayfps.vercel.app](https://subwayfps.vercel.app).
 
 ## Modes
 
