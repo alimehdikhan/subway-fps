@@ -170,7 +170,13 @@ function renderWetReflections(dt){
   wetReflectionTick=0;
   var rw=coarse?384:640,rh=Math.max(1,Math.round(rw/camera.aspect));
   rh=Math.min(640,rh);
-  if(!wetReflectionRT){wetReflectionRT=new THREE.WebGLRenderTarget(rw,rh);wetReflectionRT.texture.encoding=THREE.sRGBEncoding;}
+  if(!wetReflectionRT){
+    wetReflectionRT=new THREE.WebGLRenderTarget(rw,rh);
+    /* wetMaterial is toneMapped:false, so whatever this holds is written straight into the scene
+       buffer: it has to be in the same space as that buffer or the puddles are the one sRGB thing
+       in a linear frame. */
+    wetReflectionRT.texture.encoding=postActive?THREE.LinearEncoding:THREE.sRGBEncoding;
+  }
   if(wetReflectionRT.width!==rw||wetReflectionRT.height!==rh)wetReflectionRT.setSize(rw,rh);
   camera.updateMatrixWorld(true);
   wetCamera.position.copy(camera.position);wetCamera.position.y=-camera.position.y;
