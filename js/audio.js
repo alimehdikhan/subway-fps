@@ -347,6 +347,13 @@ function sfxHurt(){
   beep(84,0.22,'sawtooth',0.32,36);noiseBurst(0.18,650,0.28);
 }
 function sfxBolt(){beep(320,0.14,'sawtooth',0.12,120);}
+/* a strip light shot out: the tube cracks, the glass comes down, the ballast lets go */
+function sfxLampBreak(){
+  if(!actx||!soundOn)return;
+  noiseBurst(0.045,7000,0.34,3000);
+  setTimeout(function(){noiseBurst(0.22,3400,0.15,800);},45);
+  beep(190,0.14,'square',0.06,58);
+}
 function sfxPickup(){beep(660,0.08,'square',0.15,920);beep(920,0.12,'sine',0.12,1350);}
 
 /* Ambient subway drone and atmospheric audio */

@@ -921,6 +921,9 @@ var M={
      at the same level as a white tile and bloomed like one. In linear HDR they can be what they
      are: well past 1.0, which is what the bloom threshold is now looking for. */
   lamp:new THREE.MeshBasicMaterial({map:TX.lampFace,color:new THREE.Color(0xf8f6ee).multiplyScalar(3.4)}),
+  /* a shot-out tube: the diffuser stops emitting and becomes a piece of dirty plastic, so it is
+     lit by the room like everything else instead of lighting it */
+  lampDead:new THREE.MeshStandardMaterial({map:TX.lampFace,color:0x2b2f33,roughness:0.82,metalness:0.05}),
   paint:plain(0x243236,.60,.20,.38),
   orange:plain(0xc1502a,.56,.08,.32),
   conduit:plain(0x828b90,.46,.88,.65),

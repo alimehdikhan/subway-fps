@@ -178,6 +178,10 @@ var coneMat=new THREE.MeshBasicMaterial({map:TX.lightBeam,transparent:true,opaci
   blending:THREE.AdditiveBlending,depthWrite:false,side:THREE.DoubleSide});
 var coneGeo=new THREE.CylinderGeometry(0.34,1.7,4.7,12,1,true);
 var cones=[],FLICKER_INDEX=4,flickerLamp=null,flickerGlow=null,flickerCone=null;
+/* Every tube in the station, so a bullet can find one and put it out. The main row is index
+   aligned with FIXTURES, which is what the roaming light pool and the volumetric march read; the
+   second row over the far track has no pool light of its own, so its `fixture` is -1. */
+var LAMPS=[],FIXTURE_DEAD={};
 var fixtureIndex=0;
 for(var lz=Z0+5;lz<Z1;lz+=7){
   var isFlicker=fixtureIndex===FLICKER_INDEX;
@@ -189,9 +193,13 @@ for(var lz=Z0+5;lz<Z1;lz+=7){
   var cone=new THREE.Mesh(coneGeo,isFlicker?coneMat.clone():coneMat);
   cone.position.set(-6,2.65,lz);world.add(cone);cones.push(cone);
   if(isFlicker){flickerLamp=lampMesh;flickerGlow=g1;flickerCone=cone;}
+  LAMPS.push({x:-6,y:5.14,z:lz,mesh:lampMesh,glow:g1,cone:cone,fixture:fixtureIndex,broken:false,
+    min:[-6.42,4.98,lz-1.60],max:[-5.58,5.30,lz+1.60]});
   add(3,5.2,lz+3.5,0.42,0.12,1.8,M.paint);
-  add(3,5.125,lz+3.5,0.3,0.03,1.6,M.lamp);
-  glow(3,5.08,lz+3.5,2.2,0xe6f0ff,0.2);
+  var lamp2=add(3,5.125,lz+3.5,0.3,0.03,1.6,M.lamp);
+  var glow2=glow(3,5.08,lz+3.5,2.2,0xe6f0ff,0.2);
+  LAMPS.push({x:3,y:5.14,z:lz+3.5,mesh:lamp2,glow:glow2,cone:null,fixture:-1,broken:false,
+    min:[2.72,4.98,lz+3.5-0.95],max:[3.28,5.30,lz+3.5+0.95]});
   fixtureIndex++;
 }
 /* amber emergency lamps on the platform wall: the only warm light in the room */
@@ -555,7 +563,7 @@ function updateLights(px,pz){
   }
   best.sort(function(a,b){return a[0]-b[0];});
   for(var k=0;k<pool.length;k++){
-    if(k<best.length&&k<poolActive){
+    if(k<best.length&&k<poolActive&&!FIXTURE_DEAD[best[k][1]]){
       var fi=best[k][1],f2=FIXTURES[fi];
       pool[k].position.set(f2[0],f2[1],f2[2]);
       pool[k].color.setHex(POOL_COLORS[k%POOL_COLORS.length]);
@@ -580,7 +588,8 @@ function updateStationFx(dt){
     }
   }
   var L=flickerLevel;
-  flickerLamp.material.color.setRGB(0.28+0.72*L,0.28+0.72*L,0.3+0.7*L);
+  /* x3.4 to sit in the same range as M.lamp, or the failing tube is the one that never blooms */
+  flickerLamp.material.color.setRGB((0.28+0.72*L)*3.4,(0.28+0.72*L)*3.4,(0.3+0.7*L)*3.4);
   flickerGlow.material.opacity=0.16*L;
   flickerCone.material.opacity=0.06*L;
   for(var k=0;k<pool.length;k++)if(pool[k].userData.fixture===FLICKER_INDEX)pool[k].intensity=pool[k].userData.base*(0.25+0.75*L);
@@ -706,6 +715,49 @@ function rayWorld(ox,oy,oz,dx,dy,dz){
     if(t<best)best=t;
   }
   return best;
+}
+/* nearest unbroken tube along a shot, or -1. Tubes are not in COL - add() only collides when it
+   is told to - so they are tested on their own rather than through rayWorld. */
+var _lampHit={t:Infinity,i:-1};
+function rayLamp(ox,oy,oz,dx,dy,dz){
+  _lampHit.t=Infinity;_lampHit.i=-1;
+  for(var i=0;i<LAMPS.length;i++){
+    if(LAMPS[i].broken)continue;
+    var t=rayBox(ox,oy,oz,dx,dy,dz,LAMPS[i]);
+    if(t<_lampHit.t){_lampHit.t=t;_lampHit.i=i;}
+  }
+  return _lampHit;
+}
+/* put one out: the diffuser goes dark, its glow and beam stop, the pool light that was sitting on
+   it is released, and the volumetric march stops asking it for light. The bake cannot be undone,
+   so the room keeps the light this tube contributed at load - what goes away is everything the
+   fixture was still doing live. */
+function breakLamp(i){
+  var L=LAMPS[i];
+  if(!L||L.broken)return false;
+  L.broken=true;
+  L.mesh.material=M.lampDead;
+  if(L.glow)L.glow.visible=false;
+  if(L.cone)L.cone.visible=false;
+  if(L.fixture>=0){
+    FIXTURE_DEAD[L.fixture]=true;
+    for(var k=0;k<pool.length;k++)if(pool[k].userData.fixture===L.fixture){pool[k].intensity=0;pool[k].userData.fixture=-1;}
+    lightAnchorX=Infinity;                      /* force updateLights to pick a live fixture */
+  }
+  if(L.mesh===flickerLamp)flickerLamp=null;     /* stop the failing-tube animation driving it */
+  /* glass down, and a short arc where the ballast lets go */
+  if(typeof elecSpark==='function'){elecSpark(L.x,L.y-0.1,L.z);elecSpark(L.x,L.y-0.25,L.z);}
+  if(typeof parts!=='undefined'&&typeof pHead!=='undefined'){
+    for(var g=0;g<10;g++){
+      var p=parts[pHead];pHead=(pHead+1)%PMAX;
+      p.life=0.5+Math.random()*0.5;
+      p.x=L.x+(Math.random()-0.5)*0.5;p.y=L.y-0.08;p.z=L.z+(Math.random()-0.5)*2.2;
+      p.vx=(Math.random()-0.5)*1.6;p.vy=-0.6-Math.random()*1.2;p.vz=(Math.random()-0.5)*1.6;
+      p.r=0.80;p.g=0.88;p.b=0.95;
+    }
+  }
+  if(typeof sfxAt==='function'&&typeof sfxLampBreak==='function')sfxAt(L.x,L.z,sfxLampBreak);
+  return true;
 }
 function raySphere(ox,oy,oz,dx,dy,dz,cx,cy,cz,r){
   var ex=ox-cx,ey=oy-cy,ez=oz-cz;
