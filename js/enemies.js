@@ -28,6 +28,93 @@ var TYPES={
 };
 var enemies=[],bolts=[],pickups=[],dying=[];
 
+/* ============================ unit senses and behaviour ============================
+   Until now a unit walked at the player's exact position whether or not it had any way of knowing
+   where that was: line of sight gated shooting, never awareness. These give it senses and a
+   memory. It sees in a cone in front of itself, it hears gunfire and explosions, its confidence in
+   the last fix decays, and once the trail is cold it sweeps instead of tracking. Sight is the
+   expensive part - one ray against every collider - so each unit re-runs it a few times a second,
+   staggered by its own timer rather than every unit on the same frame. */
+var AI_VIEW_COS=Math.cos(1.15);          /* a 132 degree cone, so going round one actually works */
+var AI_VIEW_FAR=34, AI_HEAR_GUN=26, AI_HEAR_BOOM=46;
+var AI_SENSE=1/6, AI_FORGET=0.16;
+/* Four stances around every free-standing solid thing tall enough to hide behind, worked out once
+   at load. The long walls and the end caps are excluded by size: they are the room, not cover. */
+var COVER=[];
+(function buildCover(){
+  if(typeof COL==='undefined')return;
+  for(var i=0;i<COL.length;i++){
+    var b=COL[i];if(b.ghost)continue;
+    var w=b.max[0]-b.min[0],dp=b.max[2]-b.min[2],h=b.max[1]-b.min[1];
+    if(h<1.9||w>4||dp>4)continue;
+    var cx=(b.min[0]+b.max[0])*0.5,cz=(b.min[2]+b.max[2])*0.5;
+    var ox=w*0.5+0.8,oz=dp*0.5+0.8;
+    COVER.push({x:cx-ox,z:cz},{x:cx+ox,z:cz},{x:cx,z:cz-oz},{x:cx,z:cz+oz});
+  }
+  COVER=COVER.filter(function(c){return !blockedAt(c.x,c.z,0.5);});
+})();
+/* one unit's sight, memory and resulting state; returns its distance to the player */
+function aiSense(e,dt){
+  var d=Math.hypot(P.x-e.x,P.z-e.z);
+  e.senseT-=dt;
+  if(e.senseT<=0){
+    e.senseT=AI_SENSE;
+    var seen=false;
+    if(d<AI_VIEW_FAR){
+      var inv=1/Math.max(d,1e-4),tx=(P.x-e.x)*inv,tz=(P.z-e.z)*inv;
+      /* anything closer than a few metres is felt rather than seen, so you cannot stand on a
+         unit's toes inside its blind spot */
+      if(tx*Math.sin(e.face)+tz*Math.cos(e.face)>AI_VIEW_COS||d<3)
+        seen=sees(e.x,1.2*e.scale,e.z,P.x,P.y+1.62-P.crouch*0.48,P.z);
+    }
+    e.canSee=seen;
+  }
+  if(e.canSee){e.lkpX=P.x;e.lkpZ=P.z;e.conf=1;e.lostT=0;}
+  else{e.conf=Math.max(0,e.conf-dt*AI_FORGET);e.lostT+=dt;}
+  e.heard=Math.max(0,e.heard-dt);
+  e.state=e.canSee?'engage':(e.conf>0.3?'hunt':'search');
+  /* a cold trail: strike out for somewhere new instead of standing on the last sighting. Without
+     this a wave stalls the moment the player breaks contact and keeps quiet. */
+  if(e.state==='search'&&Math.hypot(e.lkpX-e.x,e.lkpZ-e.z)<1.6){
+    e.lkpX=clamp(P.x+(Math.random()-0.5)*9,-10.2,-1.7);
+    e.lkpZ=clamp(P.z+(Math.random()-0.5)*22,Z0+2,Z1-2);
+  }
+  return d;
+}
+/* gunfire and explosions carry: anything close enough gets a fix on where the noise came from */
+function aiHear(x,z,loud){
+  for(var i=0;i<enemies.length;i++){
+    var e=enemies[i];if(!e||e.dead)continue;
+    var d=Math.hypot(x-e.x,z-e.z);
+    if(d>loud)continue;
+    var c=0.35+0.6*(1-d/loud);
+    if(c>e.conf){e.conf=c;e.lkpX=x;e.lkpZ=z;e.heard=0.8;}
+  }
+}
+/* Spread the units that actually have you around you, instead of letting them file in along one
+   line. Sorting by bearing and dealing out an approach angle each is enough to make a group read
+   as a group; anything cleverer is not legible at this speed. */
+function aiSquad(){
+  var live=[];
+  for(var i=0;i<enemies.length;i++){var e=enemies[i];if(e&&!e.dead&&e.state==='engage')live.push(e);}
+  if(live.length<2){if(live.length)live[0].slot=0;return;}
+  live.sort(function(a,b){return Math.atan2(a.x-P.x,a.z-P.z)-Math.atan2(b.x-P.x,b.z-P.z);});
+  for(var k=0;k<live.length;k++)live[k].slot=((k/(live.length-1))-0.5)*1.30;
+}
+/* The eye says what the unit is doing: hot when it has you, amber while it hunts the last fix,
+   cold while it sweeps. Ranged units drive their own eye while charging a shot, so leave those. */
+function aiEyeTell(e){
+  if(e.cfg.ranged&&e.charge>0.01)return;
+  var m=e.eye&&e.eye.material;if(!m)return;
+  if(e.state==='engage')m.color.setRGB(1,0.13,0.08);
+  else if(e.state==='hunt')m.color.setRGB(1,0.55,0.10);
+  else m.color.setRGB(0.18,0.55,0.85);
+  if(e.eyeGlow){
+    e.eyeGlow.material.color.copy(m.color);
+    e.eyeGlow.material.opacity=e.state==='engage'?0.85:(e.state==='hunt'?0.55:0.30);
+  }
+}
+
 /* ---- floating damage numbers: a DOM pool projected from world space every frame ---- */
 var DN_MAX=28,dnPool=[],dnHead=0,dnRoot=$('dmgnums'),_dnV=new THREE.Vector3();
 for(var dni=0;dni<DN_MAX;dni++){
@@ -195,7 +282,10 @@ function makeEnemy(type,x,z){
     speed:cfg.speed*(G.spdScale||1),
     charge:0,burst:0,phase:Math.random()*TAU,strafe:Math.random()<0.5?1:-1,stuck:0,melee:0,radius:0.4*cfg.scale,
     face:Math.atan2(P.x-x,P.z-z),shieldHp:cfg.shieldHp?Math.round(cfg.shieldHp*hpScale):0,shieldMax:cfg.shieldHp?Math.round(cfg.shieldHp*hpScale):0,
-    shieldDown:0,shieldFlash:0,stagger:0,tick:0.3,dead:false,lastZone:'body',knockVx:0,knockVz:0,flinch:0,spawnT:0
+    shieldDown:0,shieldFlash:0,stagger:0,tick:0.3,dead:false,lastZone:'body',knockVx:0,knockVz:0,flinch:0,spawnT:0,
+    /* senses and memory: a unit arrives knowing roughly where you are, and loses you from there */
+    state:'engage',canSee:false,conf:1,lkpX:P.x,lkpZ:P.z,lostT:0,heard:0,
+    senseT:Math.random()*AI_SENSE,slot:0
   };
 }
 function hitSpheres(e){

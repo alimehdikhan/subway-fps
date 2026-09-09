@@ -153,6 +153,7 @@ function shoot(){
 
   // Audio, casing ejection & barrel heating
   sfxShot(cur);
+  if(typeof aiHear==='function')aiHear(P.x,P.z,AI_HEAR_GUN);   /* every shot gives your position away */
   spawnCasing(wcfg.casingType);
   if(!P.barrelHeat)P.barrelHeat=0;
   P.barrelHeat=Math.min(1.0, P.barrelHeat + (cur===2 ? 0.08 : (cur===1 ? 0.25 : 0.12)));
@@ -404,6 +405,7 @@ function explodeNade(n){
   spark(n.x,n.y+0.5,n.z,18,1,0.85,0.25,5,4);
   smoke(n.x,n.y+0.4,n.z,8);
   blastFx(n.x,n.y+0.35,n.z,0.9);
+  if(typeof aiHear==='function')aiHear(n.x,n.z,AI_HEAR_BOOM);   /* a blast is heard right across the platform */
   sfxAt(n.x,n.z,sfxGrenadeBlast);          /* the grenade used to detonate silently */
   blastDamage(n.x,n.z,5.6,170,48,null);
 }
@@ -1014,6 +1016,7 @@ P.barrelHeat=Math.max(0,P.barrelHeat-dt*0.18);
   /* hostiles: iterate a snapshot, because a charger going off mid-loop can remove several
      units from the live array at once */
   var dmgMul=D().dmg*(G.dmgScale||1);
+  if(typeof aiSquad==='function')aiSquad();      /* deal out approach bearings once per frame */
   var roster=enemies.slice();
   for(var ei=roster.length-1;ei>=0;ei--){
     var e=roster[ei],cfg=e.cfg;
@@ -1033,31 +1036,41 @@ P.barrelHeat=Math.max(0,P.barrelHeat-dt*0.18);
     }
     e.skin.emissive.setRGB(e.flash*2.2,e.flash*1.7,e.flash*0.8);
     var pdx=P.x-e.x,pdz=P.z-e.z;
-    var dx=pdx,dz=pdz,d=Math.max(0.01,Math.hypot(dx,dz));
-    var los=sees(e.x,1.2*e.scale,e.z,P.x,P.y+1.62-P.crouch*0.48,P.z);
+    var d=aiSense(e,dt);                                 /* staggered sight, memory, state */
+    var los=e.canSee;
+    /* Where the unit is actually trying to get to. One that has you goes for you; one that has
+       lost you goes for the last place it had a fix. That is the whole difference between a unit
+       that tracks you through a wall and one that has to look for you. */
+    var tx=(e.state==='engage')?P.x:e.lkpX, tz=(e.state==='engage')?P.z:e.lkpZ;
+    var dx=tx-e.x,dz=tz-e.z,td=Math.max(0.01,Math.hypot(dx,dz));
     var keep=cfg.ranged?cfg.keep:(cfg.boom?0.9:1.1);
-    var want=(d>keep||!los)?1:(d<keep*0.62?-0.8:0);
+    var want=(e.state==='engage')?((d>keep||!los)?1:(d<keep*0.62?-0.8:0)):(td>0.6?1:0);
     if(cfg.boom)want=1;                                  /* chargers never back off */
     /* staggered wardens crawl; stagger fades */
     var spdMul=1;
     if(e.stagger>0){e.stagger-=dt;spdMul=0.42;}
     /* Sprinter / charger zigzag movement */
-    if(cfg.zigzag&&d>2){
+    if(cfg.zigzag&&td>2){
       e.phase+=dt*5;
       var zig=Math.sin(e.phase)*(cfg.boom?0.45:0.7);
-      dx+=zig*dz/d;dz-=zig*dx/d;
+      dx+=zig*dz/td;dz-=zig*dx/td;
+    }
+    /* squad spread: swing the approach off the direct line by the bearing this unit was dealt */
+    if(e.state==='engage'&&e.slot){
+      var ca=Math.cos(e.slot),sa=Math.sin(e.slot),rx=dx*ca-dz*sa;
+      dz=dx*sa+dz*ca;dx=rx;
     }
     /* Sentry flanking: strafe sideways when in range with LOS */
-    if(cfg.ranged&&los&&d<cfg.keep&&d>cfg.keep*0.5){
-      var fx2=-dz/d*e.strafe,fz2=dx/d*e.strafe;
-      dx=dx/d*0.3+fx2*0.7;dz=dz/d*0.3+fz2*0.7;
+    if(cfg.ranged&&los&&e.state==='engage'&&d<cfg.keep&&d>cfg.keep*0.5){
+      var fx2=-dz/td*e.strafe,fz2=dx/td*e.strafe;
+      dx=dx/td*0.3+fx2*0.7;dz=dz/td*0.3+fz2*0.7;
     }
     if(want!==0){
       var sp=e.speed*spdMul*dt*(want>0?1:0.7),ox=e.x,oz=e.z;
-      slide(e,dx/d*sp*Math.sign(want),dz/d*sp*Math.sign(want),e.radius);
+      slide(e,dx/td*sp*Math.sign(want),dz/td*sp*Math.sign(want),e.radius);
       if(Math.hypot(e.x-ox,e.z-oz)<sp*0.3){
         e.stuck+=dt;
-        slide(e,-dz/d*sp*e.strafe,dx/d*sp*e.strafe,e.radius);
+        slide(e,-dz/td*sp*e.strafe,dx/td*sp*e.strafe,e.radius);
         if(e.stuck>1.4){e.strafe*=-1;e.stuck=0;}
       }else e.stuck=Math.max(0,e.stuck-dt);
     }else if(cfg.ranged){
@@ -1098,6 +1111,7 @@ P.barrelHeat=Math.max(0,P.barrelHeat-dt*0.18);
         e.face=wantFace;
       }
     }
+    if(typeof aiEyeTell==='function')aiEyeTell(e);
     /* attack */
     e.cool-=dt;
     if(cfg.ranged){
