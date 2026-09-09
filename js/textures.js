@@ -913,8 +913,14 @@ var M={
   dark:plain(0x0c1416,.92,0,.1),
   black:new THREE.MeshBasicMaterial({color:0x030608}),
   train:mat(rep(TX.train,3,1),{rough:1,metal:.75,color:0xb4bebf,normal:rep(TX.trainNormal,3,1),ns:.45,roughMap:rep(TX.trainRough,3,1),envMapI:.75}),
-  glass:new THREE.MeshStandardMaterial({color:0x1a363c,roughness:.04,metalness:.85,transparent:true,opacity:.52}),
-  lamp:new THREE.MeshBasicMaterial({map:TX.lampFace,color:0xf8f6ee}),
+  /* glass is a dielectric: at metalness .85 three strips almost all the diffuse and tints the
+     specular with the base colour, so every train window, cab screen, vending front and kiosk
+     panel rendered as dark teal chrome. Metalness 0 and a pale tint let the envMap carry it. */
+  glass:new THREE.MeshStandardMaterial({color:0x93aab1,roughness:.06,metalness:0,transparent:true,opacity:.5,envMapIntensity:1.2}),
+  /* A diffuser at 0.97 was the brightest thing the old 8-bit buffer could hold, so the lamps sat
+     at the same level as a white tile and bloomed like one. In linear HDR they can be what they
+     are: well past 1.0, which is what the bloom threshold is now looking for. */
+  lamp:new THREE.MeshBasicMaterial({map:TX.lampFace,color:new THREE.Color(0xf8f6ee).multiplyScalar(3.4)}),
   paint:plain(0x243236,.60,.20,.38),
   orange:plain(0xc1502a,.56,.08,.32),
   conduit:plain(0x828b90,.46,.88,.65),
