@@ -324,8 +324,8 @@
       }
     ],
     "batchStats": {
-      "before": 334,
-      "after": 47
+      "before": 310,
+      "after": 41
     },
     "coarse": false,
     "scale": 1,
@@ -656,8 +656,8 @@
       }
     ],
     "batchStats": {
-      "before": 334,
-      "after": 47
+      "before": 310,
+      "after": 41
     },
     "coarse": true,
     "scale": 0.85,
