@@ -1315,26 +1315,67 @@ function updatePuffs(dt){
 }
 /* Explosions: a fast fireball sprite, a shockwave ring on the floor, rising smoke and a brief,
    sane point light. The rail impact reuses the pool with a cyan, camera-facing ring. */
-var BLAST_MAX=6,blastPool=[],blastHead=0;
+var BLAST_MAX=6,BLAST_LOBES=4,blastPool=[],blastHead=0;
 var ringFlatGeo=new THREE.PlaneGeometry(1,1);ringFlatGeo.rotateX(-Math.PI/2);
+/* Embers: burning fragments thrown out of the charge, warm and heavy, which is most of what sells
+   the scale of a blast once the flash is gone. */
+function blastEmbers(x,y,z,scale){
+  if(typeof parts==='undefined'||typeof pHead==='undefined')return;
+  var n=Math.max(4,Math.round(30*scale*(typeof fxScale==='number'?fxScale:1)));
+  for(var i=0;i<n;i++){
+    var p=parts[pHead];pHead=(pHead+1)%PMAX;
+    var a=Math.random()*TAU,e=Math.random()*1.3-0.15,sp=3+Math.random()*10;
+    p.life=0.35+Math.random()*0.95;
+    p.x=x+(Math.random()-0.5)*0.3;p.y=y+(Math.random()-0.5)*0.3;p.z=z+(Math.random()-0.5)*0.3;
+    p.vx=Math.cos(a)*Math.cos(e)*sp;p.vy=Math.sin(e)*sp+2.2;p.vz=Math.sin(a)*Math.cos(e)*sp;
+    p.r=1.0;p.g=0.42+Math.random()*0.38;p.b=0.10+Math.random()*0.10;
+  }
+}
 for(var bfi=0;bfi<BLAST_MAX;bfi++){
   var fire=new THREE.Sprite(new THREE.SpriteMaterial({map:TX.flash,color:new THREE.Color(0xffc070).multiplyScalar(4.2),transparent:true,blending:THREE.AdditiveBlending,depthWrite:false,opacity:0}));
   var ringFlat=new THREE.Mesh(ringFlatGeo,new THREE.MeshBasicMaterial({map:TX.ring,color:0xffb070,transparent:true,blending:THREE.AdditiveBlending,depthWrite:false,side:THREE.DoubleSide,opacity:0}));
   var ringSprite=new THREE.Sprite(new THREE.SpriteMaterial({map:TX.ring,color:0x7af4ff,transparent:true,blending:THREE.AdditiveBlending,depthWrite:false,opacity:0}));
+  /* the pressure wave: a camera-facing ring that outruns the fireball and is gone in a sixth of
+     a second, which is what reads as a bang rather than a bonfire */
+  var shock=new THREE.Sprite(new THREE.SpriteMaterial({map:TX.ring,color:new THREE.Color(0xffd8a8).multiplyScalar(2.2),transparent:true,blending:THREE.AdditiveBlending,depthWrite:false,opacity:0}));
+  shock.visible=false;scene.add(shock);
+  /* a single disc reads as a decal; real fire is lumpy, so the core is surrounded by lobes that
+     start late, push outward and cool at their own rate */
+  var lobes=[];
+  for(var lbi=0;lbi<BLAST_LOBES;lbi++){
+    var lm=new THREE.Sprite(new THREE.SpriteMaterial({map:lbi%2?TX.flash:TX.flash2,color:0xffffff,transparent:true,blending:THREE.AdditiveBlending,depthWrite:false,opacity:0}));
+    lm.visible=false;scene.add(lm);
+    lobes.push({s:lm,ox:0,oy:0,oz:0,delay:0,mult:1});
+  }
   fire.visible=ringFlat.visible=ringSprite.visible=false;scene.add(fire);scene.add(ringFlat);scene.add(ringSprite);
-  blastPool.push({fire:fire,ring:ringFlat,ringS:ringSprite,t:99,scale:1,cyan:false});
+  blastPool.push({fire:fire,ring:ringFlat,ringS:ringSprite,shock:shock,lobes:lobes,
+                  t:99,scale:1,cyan:false,px:0,py:0,pz:0});
 }
 function blastFx(x,y,z,scale,cyan){
   var b=blastPool[blastHead];blastHead=(blastHead+1)%BLAST_MAX;
-  b.t=0;b.scale=scale||1;b.cyan=!!cyan;
+  b.t=0;b.scale=scale||1;b.cyan=!!cyan;b.px=x;b.py=y;b.pz=z;
   b.fire.position.set(x,y,z);b.fire.material.rotation=Math.random()*TAU;b.fire.visible=true;
   b.fire.material.map=Math.random()<0.5?TX.flash:TX.flash2;
-  if(cyan){b.ringS.position.set(x,y,z);b.ringS.visible=true;b.ring.visible=false;}
+  if(cyan){b.ringS.position.set(x,y,z);b.ringS.visible=true;b.ring.visible=false;b.shock.visible=false;
+    for(var lz2=0;lz2<BLAST_LOBES;lz2++)b.lobes[lz2].s.visible=false;}
   else{
     b.ring.position.set(x,x>-1.3?-1.02:0.06,z);b.ring.visible=true;b.ringS.visible=false;
-    puff(x,y+0.15,z,6*b.scale,1.3*b.scale,0,0.8,0,0x55585a,1.9,0.72);
-    puff(x,y+0.05,z,4*b.scale,0.8*b.scale,0,1.7,0,0xa9a39a,0.55,0.5);
-    muzzleLight.position.set(x,y+0.5,z);muzzleLight.intensity=6.5*b.scale;
+    b.shock.position.set(x,y,z);b.shock.visible=true;
+    for(var li=0;li<BLAST_LOBES;li++){
+      var L=b.lobes[li],la=Math.random()*TAU,le=Math.random()*1.1-0.35;
+      L.ox=Math.cos(la)*Math.cos(le);L.oy=Math.sin(le)+0.25;L.oz=Math.sin(la)*Math.cos(le);
+      L.delay=0.015+Math.random()*0.075;L.mult=0.45+Math.random()*0.5;
+      L.s.material.rotation=Math.random()*TAU;
+      L.s.material.map=Math.random()<0.5?TX.flash:TX.flash2;
+      L.s.visible=false;
+    }
+    /* smoke: a fast dirty ball, a rising column behind it, and a low skirt that hugs the floor */
+    puff(x,y+0.15,z,7*b.scale,1.4*b.scale,0,0.8,0,0x3d4042,2.4,0.72);
+    puff(x,y+0.05,z,5*b.scale,0.9*b.scale,0,1.9,0,0x9a948b,0.7,0.5);
+    puff(x,y+0.55*b.scale,z,4*b.scale,1.1*b.scale,0,2.4,0,0x6b6862,1.7,0.40);
+    puff(x,y-0.10,z,5*b.scale,1.0*b.scale,0,0.15,0,0x8b877e,1.2,0.30);
+    blastEmbers(x,y,z,b.scale);
+    muzzleLight.position.set(x,y+0.5,z);muzzleLight.intensity=Math.max(muzzleLight.intensity,26*b.scale);
   }
 }
 function updateBlasts(dt){
@@ -1345,12 +1386,48 @@ function updateBlasts(dt){
     var fs=(b.cyan?(0.5+1.4*kf):(1.3+3.4*kf))*b.scale;
     b.fire.scale.set(fs,fs,1);b.fire.material.opacity=Math.pow(1-kf,1.2);
     if(b.cyan)b.fire.material.color.setRGB(0.6+0.4*(1-kf),1,1);
-    else b.fire.material.color.setRGB(1,0.45+0.55*(1-kf),0.1+0.75*(1-kf)*(1-kf));
+    else{
+      /* In a float buffer the detonation can be what it is: white hot at the front, ten times over
+         the threshold so the bloom tears, then cooling through yellow into a deep red as it dies. */
+      var heat=Math.pow(1-kf,1.6),boost=1.0+9.0*heat;
+      b.fire.material.color.setRGB(boost,boost*(0.34+0.56*(1-kf)),boost*(0.07+0.5*Math.pow(1-kf,3)));
+    }
     if(kf>=1)b.fire.visible=false;
+    var lobesLive=false;
+    if(!b.cyan){
+      for(var lq=0;lq<BLAST_LOBES;lq++){
+        var LB=b.lobes[lq],lt=(b.t-LB.delay)/0.30;
+        if(lt<0){LB.s.visible=false;lobesLive=true;continue;}
+        if(lt>=1){LB.s.visible=false;continue;}
+        lobesLive=true;LB.s.visible=true;
+        var lspread=(0.35+lt*1.7)*b.scale;
+        LB.s.position.set(b.px+LB.ox*lspread,b.py+LB.oy*lspread*0.8+lt*0.55*b.scale,b.pz+LB.oz*lspread);
+        var lsz=(0.9+2.5*lt)*b.scale*LB.mult;LB.s.scale.set(lsz,lsz,1);
+        var lheat=Math.pow(1-lt,1.7),lb=0.8+7.0*lheat;
+        LB.s.material.color.setRGB(lb,lb*(0.30+0.52*(1-lt)),lb*(0.05+0.42*Math.pow(1-lt,3)));
+        LB.s.material.opacity=Math.pow(1-lt,1.5)*0.85;
+      }
+      var ks=Math.min(1,b.t/0.16);
+      if(ks<1){
+        lobesLive=true;b.shock.visible=true;
+        var ss=(0.5+9.5*ks)*b.scale;b.shock.scale.set(ss,ss,1);
+        b.shock.material.opacity=Math.pow(1-ks,2.2)*0.55;
+      }else b.shock.visible=false;
+      /* The flash owns the shared muzzle light outright for a quarter second and drives its own
+         curve down to nothing. Only raising it would leave the linear decay in player.js, which
+         runs at 26 a second, a full second to walk a 26 peak back down - the platform stayed lit
+         warm long after the fireball had gone. */
+      var kl=Math.min(1,b.t/0.28);
+      if(kl<1){
+        lobesLive=true;
+        muzzleLight.position.set(b.px,b.py+0.5,b.pz);
+        muzzleLight.intensity=26*b.scale*Math.pow(1-kl,2.2);
+      }
+    }
     var rs=(b.cyan?(0.3+2.2*kr):(0.6+7.5*kr))*b.scale,ro=Math.pow(1-kr,2)*(b.cyan?0.9:0.7);
     if(b.cyan){b.ringS.scale.set(rs,rs,1);b.ringS.material.opacity=ro;if(kr>=1)b.ringS.visible=false;}
     else{b.ring.scale.set(rs,1,rs);b.ring.material.opacity=ro;if(kr>=1)b.ring.visible=false;}
-    if(kf>=1&&kr>=1)b.t=99;
+    if(kf>=1&&kr>=1&&!lobesLive)b.t=99;
   }
 }
 function railImpactFx(x,y,z){
