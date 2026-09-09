@@ -457,8 +457,12 @@
     if(pctEl)pctEl.textContent=Math.round(p*100)+'%';
     if(label&&stageEl)stageEl.textContent=label;
   }
+  /* Give the browser a frame to draw the bar, but never depend on one arriving: a background tab
+     throttles rAF and the test harness replaces it outright, and either way loading must finish. */
   function paint(){return new Promise(function(r){
-    requestAnimationFrame(function(){requestAnimationFrame(function(){r();});});
+    var done=false,fin=function(){if(done)return;done=true;r();};
+    try{requestAnimationFrame(function(){requestAnimationFrame(fin);});}catch(e){}
+    setTimeout(fin,60);
   });}
   function loadOne(src){return new Promise(function(res,rej){
     var s=document.createElement('script');s.src=src;s.async=false;
