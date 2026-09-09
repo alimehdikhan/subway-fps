@@ -1,0 +1,521 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Last Train — Northgate Station</title>
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#0a1114">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%230a1114'/%3E%3Ccircle cx='16' cy='16' r='9' fill='none' stroke='%23e8a33d' stroke-width='3'/%3E%3Ccircle cx='16' cy='16' r='3' fill='%23e8a33d'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="css/game.css">
+</head>
+<body>
+<canvas id="view"></canvas>
+
+<div id="hud" hidden>
+  <div id="fpshud"><span id="fpsval">—</span> FPS <span class="sep">|</span> <span id="msval">—</span> ms <span class="sep">|</span> low <span id="lowval">—</span> <span id="qualityval"></span></div>
+  <div id="wpndock">
+    <div class="wcard active" id="wc-0">
+      <div class="whead"><span>[1] RIFLE</span></div>
+      <div class="wname">AK-47</div>
+      <div class="wammo" id="wc-ammo-0">30/120</div>
+    </div>
+    <div class="wcard" id="wc-1">
+      <div class="whead"><span>[2] SHOTGUN</span></div>
+      <div class="wname">S1897</div>
+      <div class="wammo" id="wc-ammo-1">8/40</div>
+    </div>
+    <div class="wcard" id="wc-2">
+      <div class="whead"><span>[3] ASSAULT</span></div>
+      <div class="wname">M416</div>
+      <div class="wammo" id="wc-ammo-2">36/160</div>
+    </div>
+    <div class="wcard" id="wc-3">
+      <div class="whead"><span>[4] RAILGUN</span></div>
+      <div class="wname">APEX-50</div>
+      <div class="wammo" id="wc-ammo-3">4/20</div>
+    </div>
+    <div class="wcard" id="wc-4">
+      <div class="whead"><span>[5] PISTOL</span></div>
+      <div class="wname">P-9 SIDEARM</div>
+      <div class="wammo" id="wc-ammo-4">15/90</div>
+    </div>
+  </div>
+
+  <div class="plate" id="service">
+    <div class="dest" id="dest">NORTHGATE</div>
+    <div class="sub" id="waveline">WAVE 01 OF 05</div>
+    <div id="pips"><i></i><i></i><i></i><i></i><i></i></div>
+  </div>
+  <div class="plate" id="board">
+    <div class="num" id="score">00000</div>
+    <div class="sub" id="left">4 units active</div>
+  </div>
+  <canvas id="map" width="220" height="220"></canvas>
+  <div class="plate" id="vitals">
+    <div class="row"><span id="hp">100</span><span class="cap">HEALTH</span><span id="shieldval">50</span><span class="cap cap-shield">SHIELD</span></div>
+    <div id="shieldbar"><i id="shieldfill"></i></div>
+    <div id="bar"><i id="barfill"></i></div>
+  </div>
+  <div class="plate" id="gun">
+    <div id="ammo">30<em>/120</em></div>
+    <div id="gunline">RM-4 CARBINE · R TO RELOAD</div>
+    <div id="reload"><i id="reloadfill"></i></div>
+    <div id="nades"><span>FRAG · G</span><i class="on"></i><i class="on"></i><i></i><i></i></div>
+  </div>
+  <div id="dmgnums"></div>
+  <div id="medal"><b id="medaltext">DOUBLE KILL</b><i id="medalsub">+50</i></div>
+  <div id="crosshair">
+    <span class="v t"></span><span class="v b"></span><span class="h l"></span><span class="h r"></span><span class="dot"></span>
+  </div>
+  <div id="hitmark"><span></span><span></span><span></span><span></span></div>
+  <div id="call"><i id="callsub">SERVICE NOTICE</i><b id="calltitle">Wave one</b></div>
+  <div id="alert"></div>
+  <div id="hitfeed" style="position:absolute;left:50%;top:42%;transform:translateX(-50%);font-size:15px;font-weight:900;letter-spacing:.18em;color:#ffcc44;text-shadow:0 0 12px rgba(255,180,40,.9);opacity:0;transition:opacity .2s;pointer-events:none"></div>
+  <div id="combo" style="position:absolute;right:24px;top:50%;font-size:28px;font-weight:900;color:#ff6a3a;text-shadow:0 0 16px rgba(255,60,20,.8);opacity:0;transition:opacity .3s;pointer-events:none;letter-spacing:.05em"></div>
+  <div id="hint"></div>
+</div>
+
+<div id="scope-vignette"></div>
+<div id="sniper-scope">
+  <div class="scope-mask"></div>
+  <div class="scope-reticle">
+    <div class="scope-glass"></div>
+    <div class="scope-ch-h"></div>
+    <div class="scope-ch-v"></div>
+    <div class="scope-fine scope-fine-h"></div>
+    <div class="scope-fine scope-fine-v"></div>
+    <i class="md" style="left:calc(50% - 26%)"></i><i class="md" style="left:calc(50% - 18%)"></i><i class="md" style="left:calc(50% - 10%)"></i>
+    <i class="md" style="left:calc(50% + 10%)"></i><i class="md" style="left:calc(50% + 18%)"></i><i class="md" style="left:calc(50% + 26%)"></i>
+    <i class="md v" style="top:calc(50% - 26%)"></i><i class="md v" style="top:calc(50% - 18%)"></i><i class="md v" style="top:calc(50% - 10%)"></i>
+    <i class="md v" style="top:calc(50% + 10%)"></i><i class="md v" style="top:calc(50% + 18%)"></i><i class="md v" style="top:calc(50% + 26%)"></i>
+    <div class="scope-lock"><b></b><b></b><b></b><b></b></div>
+    <div class="scope-dot"></div>
+    <div class="scope-label">APEX / 3× OPTIC</div>
+    <div class="scope-breath" id="scopebreath">SHIFT · HOLD BREATH</div>
+    <div class="scope-readout" id="scopereadout">TARGET LOCK // 15KV ION BEAM</div>
+  </div>
+</div>
+
+<div id="hurt"></div><div id="low"></div>
+
+<div id="touch">
+  <!-- Left Screen: Floating Dynamic Virtual Joystick Zone -->
+  <div id="touch-zone-left"></div>
+  <div id="stick">
+    <div id="stick-base"></div>
+    <div id="knob"></div>
+    <div id="stick-sprint-lock"><span class="sprint-icon">▲</span><span class="sprint-label">SPRINT</span></div>
+  </div>
+
+  <!-- Right Screen: Look / Aim Camera Swipe Zone -->
+  <div id="touch-zone-right"></div>
+
+  <!-- Right-Thumb Tactical Combat Action Cluster (Thumb Arc) -->
+  <div id="touch-actions">
+    <button class="tbtn" id="t-fire" aria-label="Fire Weapon">
+      <div class="tbtn-inner">
+        <svg viewBox="0 0 24 24" class="t-svg"><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="2" fill="none"/><line x1="12" y1="3" x2="12" y2="7" stroke="currentColor" stroke-width="2"/><line x1="12" y1="17" x2="12" y2="21" stroke="currentColor" stroke-width="2"/><line x1="3" y1="12" x2="7" y2="12" stroke="currentColor" stroke-width="2"/><line x1="17" y1="12" x2="21" y2="12" stroke="currentColor" stroke-width="2"/><circle cx="12" cy="12" r="3" fill="currentColor"/></svg>
+        <span class="tbtn-sub">FIRE</span>
+      </div>
+    </button>
+
+    <button class="tbtn" id="t-ads" aria-label="ADS Scope">
+      <div class="tbtn-inner">
+        <svg viewBox="0 0 24 24" class="t-svg"><circle cx="12" cy="12" r="8" stroke="currentColor" stroke-width="1.8" fill="none" stroke-dasharray="3 2"/><circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="2" fill="none"/><circle cx="12" cy="12" r="1" fill="currentColor"/></svg>
+        <span class="tbtn-sub">ADS</span>
+      </div>
+    </button>
+
+    <button class="tbtn" id="t-jump" aria-label="Jump">
+      <div class="tbtn-inner">
+        <svg viewBox="0 0 24 24" class="t-svg"><polyline points="6 14 12 8 18 14" stroke="currentColor" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/><polyline points="6 19 12 13 18 19" stroke="currentColor" stroke-width="1.8" fill="none" stroke-linecap="round" stroke-linejoin="round" opacity="0.6"/></svg>
+        <span class="tbtn-sub">JUMP</span>
+      </div>
+    </button>
+
+    <button class="tbtn" id="t-crouch" aria-label="Slide or Crouch">
+      <div class="tbtn-inner">
+        <svg viewBox="0 0 24 24" class="t-svg"><path d="M12 4a2 2 0 1 0 0 4 2 2 0 0 0 0-4zm-3 7h6l2 5-2 1-1.5-3.5L12 15l-1.5-1.5L9 17l-2-1 2-5z" fill="currentColor"/></svg>
+        <span class="tbtn-sub">SLIDE</span>
+      </div>
+    </button>
+
+    <button class="tbtn" id="t-reload" aria-label="Reload Weapon">
+      <div class="tbtn-inner">
+        <svg viewBox="0 0 24 24" class="t-svg"><path d="M12 4V1L8 5l4 4V6a6 6 0 1 1-6 6H4a8 8 0 1 0 8-8z" fill="currentColor"/></svg>
+        <span class="tbtn-sub">RELOAD</span>
+      </div>
+    </button>
+
+    <button class="tbtn" id="t-switch" aria-label="Cycle Arsenal">
+      <div class="tbtn-inner">
+        <span class="t-wpn-badge" id="t-wpn-num">1</span>
+        <span class="tbtn-sub" id="t-wpn-label">AK-47</span>
+      </div>
+    </button>
+
+    <button class="tbtn" id="t-nade" aria-label="Throw Grenade">
+      <div class="tbtn-inner">
+        <svg viewBox="0 0 24 24" class="t-svg"><path d="M9 3h5v2h-1.2l.6 2.1A7 7 0 1 1 8.6 7.2L9.2 5H9V3z" fill="currentColor"/><circle cx="12" cy="14" r="2.2" fill="#0a1114"/></svg>
+        <span class="tbtn-sub" id="t-nade-count">FRAG 2</span>
+      </div>
+    </button>
+
+    <button class="tbtn" id="t-inspect" aria-label="Inspect Weapon">
+      <div class="tbtn-inner">
+        <svg viewBox="0 0 24 24" class="t-svg"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" stroke="currentColor" stroke-width="2" fill="none"/><circle cx="12" cy="12" r="3" fill="currentColor"/></svg>
+        <span class="tbtn-sub">INSPECT</span>
+      </div>
+    </button>
+
+    <button class="tbtn" id="t-sprint" aria-label="Sprint">
+      <div class="tbtn-inner">
+        <svg viewBox="0 0 24 24" class="t-svg"><path d="M13.5 5.5c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zM9.8 8.9L7 23h2.1l1.8-8 2.1 2v6h2v-7.5l-2.1-2 .6-3C14.8 12 16.8 13 19 13v-2c-1.9 0-3.5-1-4.3-2.4l-1-1.6c-.4-.6-1-1-1.7-1-.3 0-.5.1-.8.1L6 8.3V13h2V9.6l1.8-.7" fill="currentColor"/></svg>
+        <span class="tbtn-sub">RUN</span>
+      </div>
+    </button>
+  </div>
+
+  <!-- Top Utilities -->
+  <button class="tbtn tbtn-top" id="t-pause" aria-label="Pause">II</button>
+  <button class="tbtn tbtn-top" id="t-fullscreen" aria-label="Fullscreen">⛶</button>
+  <button class="tbtn tbtn-top" id="t-gyro-recenter" aria-label="Recenter Gyro" title="Recenter Gyro Aiming">⌖</button>
+</div>
+
+<div id="rotate-prompt">
+  <span>⟳ ROTATE DEVICE TO LANDSCAPE FOR TACTICAL COMBAT</span>
+  <button class="secondary" id="portrait-anyway">Continue in portrait</button>
+</div>
+
+<div id="toast" role="status" aria-live="polite"></div>
+<div id="layout-editor">
+  <span>DRAG THE CONTROLS WHERE YOUR THUMBS LAND</span>
+  <button id="layout-reset" type="button">Reset</button>
+  <button id="layout-cancel" type="button">Cancel</button>
+  <button id="layout-save" type="button" class="primary-mini">Save</button>
+</div>
+
+<section class="screen" id="menu" hidden>
+  <div class="menu-wrap">
+    <div class="menu-kicker">04:12 · Northgate · northbound platform</div>
+    <h1 class="menu-title">Last<span>Train</span></h1>
+
+    <nav class="menu-list">
+      <button class="mrow" id="start">New game<span class="mrow-note">Five waves</span></button>
+      <button class="mrow" id="start-endless">Overtime<span class="mrow-note">Endless</span></button>
+      <button class="mrow" id="diff-toggle">Difficulty: Normal</button>
+      <button class="mrow" id="opts-toggle" aria-expanded="false" aria-controls="menu-opts">Options</button>
+      <button class="mrow" id="fs-btn">Fullscreen</button>
+    </nav>
+    <p class="best" id="bestline"></p>
+
+    <div class="opt-drawer" id="menu-opts" hidden>
+      <div class="opt-group">
+        <h3>Display</h3>
+        <div class="opt-row">
+          <button class="secondary" id="quality">Detail: high</button>
+          <button class="secondary" id="fps-toggle">FPS counter: on</button>
+        </div>
+      </div>
+      <div class="opt-group">
+        <h3>Audio</h3>
+        <div class="opt-row">
+          <button class="secondary" id="sound">Sound: on</button>
+        </div>
+      </div>
+      <div class="opt-group">
+        <h3>Controls</h3>
+        <div class="opt-row">
+          <button class="secondary" id="touch-toggle">Controls: Touch (Auto)</button>
+          <button class="secondary" id="sens-toggle">Look: Normal</button>
+          <button class="secondary" id="assist-toggle">Touch aim assist: on</button>
+        </div>
+      </div>
+      <div class="opt-group">
+        <h3>Touch layout</h3>
+        <div class="opt-row">
+          <button class="secondary" id="layout-toggle">Layout: Right-handed</button>
+          <button class="secondary" id="btnsize-toggle">Buttons: Normal</button>
+        </div>
+      </div>
+      <div class="opt-group">
+        <h3>Motion aiming</h3>
+        <div class="opt-row">
+          <button class="secondary" id="gyro-toggle">Gyro: Off</button>
+          <button class="secondary" id="gyro-settings">⚙ Gyro Settings</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="menu-foot">
+      <div class="keys">
+        <span><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd>Move</span>
+        <span><kbd>Shift</kbd>Sprint</span>
+        <span><kbd>RMB</kbd>Aim</span>
+        <span><kbd>1-5</kbd><kbd>Q</kbd>Arsenal</span>
+        <span><kbd>R</kbd>Reload</span>
+        <span><kbd>G</kbd>Grenade</span>
+        <span><kbd>F</kbd>Inspect</span>
+        <span><kbd>C</kbd>Slide</span>
+        <span><kbd>Esc</kbd>Pause</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="screen" id="paused" hidden>
+  <div class="panel">
+    <div class="line">Service held</div>
+    <h2>Paused</h2>
+    <p class="blurb">Nothing moves while you're away from the platform.</p>
+    <button class="primary" id="resume">Back to the platform</button>
+    <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:10px">
+      <button class="secondary" id="sound2">Sound: on</button>
+      <button class="secondary" id="quality2">Graphics: Auto</button>
+      <button class="secondary" id="fps-toggle2">FPS counter: on</button>
+      <button class="secondary" id="assist-toggle2">Touch aim assist: on</button>
+      <button class="secondary" id="touch-toggle2">Controls: Touch (Auto)</button>
+      <button class="secondary" id="layout-toggle2">Layout: Right-handed</button>
+      <button class="secondary" id="btnsize-toggle2">Buttons: Normal</button>
+      <button class="secondary" id="edit-layout">Edit touch layout</button>
+      <button class="secondary" id="gyro-toggle2">Gyro: Off</button>
+      <button class="secondary" id="gyro-settings2">⚙ Gyro Settings</button>
+      <button class="secondary" id="sens-toggle2">Look: Normal</button>
+      <button class="secondary" id="fs-btn2">⛶ Fullscreen</button>
+      <button class="secondary" id="quit">Leave the run</button>
+    </div>
+    <div class="keys">
+      <span><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd>Move</span>
+      <span><kbd>Shift</kbd>Sprint</span>
+      <span><kbd>RMB</kbd>Aim</span>
+      <span><kbd>R</kbd>Reload</span>
+      <span><kbd>G</kbd>Grenade</span>
+      <span><kbd>Space</kbd>Jump</span>
+    </div>
+  </div>
+</section>
+
+<section class="screen" id="over" hidden>
+  <div class="panel">
+    <div class="line" id="overline">End of the line</div>
+    <h2 id="overtitle">Signal lost<span id="newbest">NEW BEST</span></h2>
+    <p class="blurb" id="overtext">The units still own the platform.</p>
+    <div class="tally">
+      <div><b id="f-score">0</b><span>SCORE</span></div>
+      <div><b id="f-kills">0</b><span>UNITS DOWN</span></div>
+      <div><b id="f-acc">0%</b><span>ACCURACY</span></div>
+      <div><b id="f-wave">1</b><span>WAVE</span></div>
+      <div><b id="f-time">0:00</b><span>TIME</span></div>
+    </div>
+    <p class="best" id="bestline2"></p>
+    <div class="panel-actions">
+      <button class="primary" id="again">Run it again</button>
+      <button class="primary alt" id="quit2">Back to the title</button>
+    </div>
+  </div>
+</section>
+
+<section class="screen" id="fail" hidden>
+  <div class="panel">
+    <div class="line">Display error</div>
+    <h2>The station won't render</h2>
+    <p class="blurb" id="failtext">This game needs WebGL and the three.js library. Check your connection,
+      then reload the page.</p>
+  </div>
+</section>
+
+<div id="gyro-modal" class="modal-overlay" hidden>
+  <div class="modal-panel">
+    <div class="modal-header">
+      <div class="line">Tactical Gyroscope Aiming</div>
+      <button class="modal-close" id="gyro-close" aria-label="Close Gyro Settings">✕</button>
+    </div>
+    
+    <div class="gyro-status-row">
+      <span class="gyro-status-label">HARDWARE STATUS:</span>
+      <span class="gyro-badge" id="gyro-status-badge">READY</span>
+    </div>
+
+    <div class="gyro-control-group">
+      <div class="gyro-row toggle-row">
+        <div>
+          <b>Gyro Aiming</b>
+          <small>Tilt phone to line up precision shots</small>
+        </div>
+        <button class="primary-mini" id="gyro-enable-btn">ENABLE</button>
+      </div>
+
+      <div class="gyro-row slider-row">
+        <div class="slider-header">
+          <span>Look Sensitivity</span>
+          <b id="gyro-sens-val">1.0×</b>
+        </div>
+        <input type="range" id="gyro-sens-slider" min="0.2" max="3.0" step="0.1" value="1.0">
+      </div>
+
+      <div class="gyro-row slider-row">
+        <div class="slider-header">
+          <span>ADS / Scope Sensitivity</span>
+          <b id="gyro-ads-sens-val">0.65×</b>
+        </div>
+        <input type="range" id="gyro-ads-sens-slider" min="0.2" max="1.5" step="0.05" value="0.65">
+      </div>
+
+      <div class="gyro-row slider-row">
+        <div class="slider-header">
+          <span>Smoothing Filter</span>
+          <b id="gyro-smoothing-val">25%</b>
+        </div>
+        <input type="range" id="gyro-smoothing-slider" min="0" max="80" step="5" value="25">
+      </div>
+
+      <div class="gyro-row slider-row">
+        <div class="slider-header">
+          <span>Deadzone (Jitter Filter)</span>
+          <b id="gyro-deadzone-val">1.5°/s</b>
+        </div>
+        <input type="range" id="gyro-deadzone-slider" min="0" max="8" step="0.5" value="1.5">
+      </div>
+
+      <div class="gyro-row checkbox-row">
+        <label><input type="checkbox" id="gyro-invert-y"> Invert Vertical Aim (Pitch)</label>
+      </div>
+      <div class="gyro-row checkbox-row">
+        <label><input type="checkbox" id="gyro-invert-x"> Invert Horizontal Aim (Yaw)</label>
+      </div>
+    </div>
+
+    <div class="modal-actions">
+      <button class="primary" id="gyro-recenter-btn">⌖ Recenter & Calibrate</button>
+      <button class="secondary" id="gyro-done-btn">Done</button>
+    </div>
+  </div>
+</div>
+
+<div id="load" hidden></div>
+
+<div id="boot">
+  <div class="boot-grid" aria-hidden="true"></div>
+  <div class="boot-pane">
+    <div class="boot-kicker">Northgate · northbound platform</div>
+    <h1 class="boot-logo">Last<span>Train</span></h1>
+    <div class="boot-track"><i id="boot-fill"></i></div>
+    <div class="boot-meta">
+      <span id="boot-stage">Starting up</span>
+      <b id="boot-pct">0%</b>
+    </div>
+    <p class="boot-tip"><em>Tip</em> <span id="boot-tip">Hold the platform until the train arrives.</span></p>
+  </div>
+  <div class="boot-foot">three.js r128 · no install, no build step</div>
+</div>
+
+<script>
+/* Boot loader. The game is a stack of classic scripts that share one global scope, so they must run
+   in order; each is fetched in turn and the screen is given a frame to paint between them, which is
+   what makes the bar move for real instead of jumping from nothing to done. */
+(function(){
+  var FILES=[
+    ['js/three.min.js','Starting the renderer'],
+    ['js/GLTFLoader.js','Preparing the model loader'],
+    ['js/core.js','Setting up cameras'],
+    ['js/textures.js','Painting tile, steel and concrete'],
+    ['js/world.js','Building the station'],
+    ['js/audio.js','Tuning the audio bench'],
+    ['js/weapons.js','Machining the arsenal'],
+    ['js/enemies.js','Waking the maintenance units'],
+    ['js/player.js','Fitting your loadout'],
+    ['js/flow.js','Writing the timetable'],
+    ['js/input.js','Wiring the controls'],
+    ['js/performance.js','Batching the geometry'],
+    ['js/aim.js','Calibrating aim'],
+    ['js/handling.js','Rigging weapon handling'],
+    ['js/hands.js','Fitting the hands'],
+    ['js/models.js','Loading the weapon models'],
+    ['js/graphics.js','Grading the lighting'],
+    ['js/main.js','Starting the frame loop']
+  ];
+  var TIPS=[
+    'Aim down sights before the first shot — a stationary aimed shot goes exactly where the sight points.',
+    'The railgun cracks a warden’s shield. Everything else has to go round it.',
+    'Chargers detonate when they die, so a shot into a group chains through them.',
+    'Sprinting costs you your aim for a moment. Stop before the corner, not after it.',
+    'Red barrels are the cheapest damage on the platform.',
+    'Press F to inspect the weapon in your hands.'
+  ];
+  var fill=document.getElementById('boot-fill'),stageEl=document.getElementById('boot-stage'),
+      pctEl=document.getElementById('boot-pct'),tipEl=document.getElementById('boot-tip'),
+      bootEl=document.getElementById('boot');
+  var total=FILES.length+1,resolveReady;
+  window.GAME_READY=new Promise(function(r){resolveReady=r;});
+  if(tipEl)tipEl.textContent=TIPS[Math.floor(Math.random()*TIPS.length)];
+  function set(p,label){
+    p=Math.max(0,Math.min(1,p));
+    if(fill)fill.style.width=(p*100).toFixed(1)+'%';
+    if(pctEl)pctEl.textContent=Math.round(p*100)+'%';
+    if(label&&stageEl)stageEl.textContent=label;
+  }
+  function paint(){return new Promise(function(r){
+    requestAnimationFrame(function(){requestAnimationFrame(function(){r();});});
+  });}
+  function loadOne(src){return new Promise(function(res,rej){
+    var s=document.createElement('script');s.src=src;s.async=false;
+    s.onload=function(){res();};s.onerror=function(){rej(new Error(src));};
+    document.head.appendChild(s);
+  });}
+  function hideBoot(){if(bootEl){bootEl.classList.add('gone');setTimeout(function(){bootEl.hidden=true;},420);}}
+  function bootFail(msg){
+    if(stageEl)stageEl.textContent=msg;
+    if(bootEl)bootEl.classList.add('failed');
+  }
+  /* an uncaught error puts the game's own failure screen up; get out of its way */
+  window.addEventListener('error',function(){hideBoot();});
+  /* the settings drawer is pure DOM, so it works before any game script has loaded */
+  (function(){
+    var t=document.getElementById('opts-toggle'),d=document.getElementById('menu-opts');
+    if(!t||!d)return;
+    t.addEventListener('click',function(){
+      var open=d.hidden;d.hidden=!open;
+      t.setAttribute('aria-expanded',open?'true':'false');
+      t.classList.toggle('open',open);
+    });
+  })();
+  window.BOOT={
+    set:set,
+    finish:function(){
+      set(FILES.length/total,'Loading the weapon models');
+      var models=(typeof MODELS_READY!=='undefined')?MODELS_READY:Promise.resolve();
+      return models.then(function(){set(1,'Ready');return paint();}).then(function(){
+        hideBoot();
+        var m=document.getElementById('menu');if(m)m.hidden=false;
+        var s=document.getElementById('start');
+        if(s&&!('ontouchstart' in window)){try{s.focus();}catch(e){}}
+        resolveReady(true);
+        return true;
+      });
+    }
+  };
+  (function next(i){
+    if(i>=FILES.length)return;
+    set(i/total,FILES[i][1]);
+    paint().then(function(){
+      return loadOne(FILES[i][0]).catch(function(e){
+        /* three.js is the only file with a fallback copy worth reaching for */
+        if(FILES[i][0]==='js/three.min.js')return loadOne('https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js');
+        throw e;
+      });
+    }).then(function(){
+      if(FILES[i][0]==='js/three.min.js'&&typeof THREE==='undefined')
+        return loadOne('https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js');
+    }).then(function(){
+      next(i+1);
+    }).catch(function(e){
+      bootFail('Could not load '+(e&&e.message?e.message:'a game file')+'. Reload to try again.');
+    });
+  })(0);
+})();
+</script>
+</body>
+</html>
