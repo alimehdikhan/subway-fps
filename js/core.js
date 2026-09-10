@@ -22,7 +22,6 @@ try{
 }catch(err){die('WebGL is unavailable in this browser. Turn on hardware acceleration and reload.');throw err;}
 if(!renderer||!renderer.getContext()){die('WebGL is unavailable in this browser. Turn on hardware acceleration and reload.');throw new Error('WebGL unavailable');}
 
-var coarse=window.matchMedia('(pointer: coarse)').matches;
 var reduceMotion=window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 var TAU=Math.PI*2, clamp=THREE.MathUtils.clamp, lerp=THREE.MathUtils.lerp;
 function slerp(cur, tgt, k, dt){ return cur + (tgt - cur) * (1.0 - Math.exp(-k * dt)); }
