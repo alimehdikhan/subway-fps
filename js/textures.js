@@ -280,6 +280,28 @@ TX.gravel=paint(256,256,function(g,w,h){
   grain(g,1200,.16,w,h);
 });
 
+/* The ballast is 7.7 x 84 m of crushed stone and carried a colour map and nothing else, so it read
+   as printed gravel rather than as loose stone. The same 2000-stone loop that paints it is redrawn
+   here as radial domes - bright at the crown, falling away into the gap - which is a height field,
+   and normalFrom turns that into the tangent-space normals the light needs to catch each stone. */
+TX.gravelNormal=normalFrom(256,256,function(g,w,h){
+  g.fillStyle='#2a2a2a';g.fillRect(0,0,w,h);
+  for(var i=0;i<2000;i++){
+    var x=rnd()*w,y=rnd()*h,s=rnd()*7+2;
+    var gr=g.createRadialGradient(x,y,0,x,y,s);
+    gr.addColorStop(0,'rgba(236,236,236,0.95)');
+    gr.addColorStop(1,'rgba(34,34,34,0)');
+    g.fillStyle=gr;g.beginPath();g.arc(x,y,s,0,TAU);g.fill();
+  }
+},null,null,3.2);
+/* crushed stone is about as rough as a surface gets; the dark patches are where oil and standing
+   water between the sleepers polish it, and those are the only places the rails reflect */
+TX.gravelRough=dataTex(256,256,function(g,w,h){
+  g.fillStyle='#f2f2f2';g.fillRect(0,0,w,h);
+  blotches(g,7,w,h,20,70,'70,70,70',.55);
+  grain(g,900,.12,w,h);
+});
+
 /* Brushed gunmetal for crates, stanchions and fittings */
 TX.metal=paint(256,256,function(g,w,h){
   g.fillStyle='#2c3335';g.fillRect(0,0,w,h);
@@ -315,6 +337,24 @@ TX.panel=paint(512,512,function(g,w,h){
   grain(g,2400,.08,w,h);
 });
 TX.panelRough=dataTex(256,256,function(g,w,h){g.fillStyle='#e0e0e0';g.fillRect(0,0,w,h);blotches(g,8,w,h,30,90,'150,150,150',.5);grain(g,400,.1,w,h);});
+/* The soffit is 19 x 84 m - the largest surface in the station and the top third of the frame
+   whenever you look level or up - and it had a colour map and a near-flat roughness map, nothing
+   that light could catch. Its own texture already implies the shuttering: seams every 128 px and
+   hollows where the water rings sit. Cut those in as height and let normalFrom read them. */
+TX.panelNormal=normalFrom(256,256,function(g,w,h){
+  g.fillStyle='#8a8a8a';g.fillRect(0,0,w,h);
+  blotches(g,16,w,h,30,100,'150,150,150',.35);                       /* swells in the pour */
+  g.strokeStyle='rgba(20,20,20,.85)';g.lineWidth=2;                  /* formwork seams, cut in */
+  for(var k=0;k<4;k++){
+    g.beginPath();g.moveTo(0,k*64);g.lineTo(w,k*64);g.stroke();
+    g.beginPath();g.moveTo(k*64,0);g.lineTo(k*64,h);g.stroke();
+  }
+  for(var i=0;i<5;i++){                                              /* the dish under a stain */
+    var x=rnd()*w,y=rnd()*h,r=rr(10,30);
+    g.fillStyle='rgba(60,60,60,.5)';g.beginPath();g.arc(x,y,r,0,TAU);g.fill();
+  }
+  grain(g,1200,.10,w,h);
+},null,null,2.2);
 
 TX.grime=paint(256,256,function(g,w,h){
   g.fillStyle='#202729';g.fillRect(0,0,w,h);
@@ -435,71 +475,96 @@ TX.ring=paint(128,128,function(g,w,h){
 TX.ring.wrapS=TX.ring.wrapT=THREE.ClampToEdgeWrapping;
 
 /* Illuminated EOTech EXPS3 Holographic Reticle (68 MOA speed ring + 1 MOA center dot + BDC holds) */
-TX.holo=paint(256,256,function(g,w,h){
+/* The reflex reticles are drawn at 512² with thin solid cores and a restrained glow, so they stay
+   crisp when the sight window fills a fifth of the frame at ADS. */
+TX.holo=paint(512,512,function(g,w,h){
   g.clearRect(0,0,w,h);
-  var cx=128,cy=128;
-  // Ambient outer laser glow halo
-  g.strokeStyle='rgba(255,50,40,0.18)';g.lineWidth=12;
-  g.beginPath();g.arc(cx,cy,66,0,TAU);g.stroke();
-  // 68 MOA crisp outer speed ring with laser bloom
-  g.strokeStyle='#ff3b30';g.lineWidth=3.6;g.shadowColor='#ff2a20';g.shadowBlur=14;
-  g.beginPath();g.arc(cx,cy,66,0,TAU);g.stroke();
-  // Quadrant stadia ticks
-  g.lineWidth=3.0;g.strokeStyle='#ff453a';
+  var cx=256,cy=256,r=84;
+  // soft laser halo behind the 68 MOA ring (the ring covers about two thirds of the window)
+  g.strokeStyle='rgba(255,60,40,0.12)';g.lineWidth=14;
+  g.beginPath();g.arc(cx,cy,r,0,TAU);g.stroke();
+  // the ring: a warm glowing band with a thin bright core
+  g.shadowColor='rgba(255,40,30,0.9)';g.shadowBlur=5;g.strokeStyle='#ff4a3c';g.lineWidth=4;
+  g.beginPath();g.arc(cx,cy,r,0,TAU);g.stroke();
+  g.shadowBlur=0;g.strokeStyle='#ffd9d2';g.lineWidth=1.4;
+  g.beginPath();g.arc(cx,cy,r,0,TAU);g.stroke();
+  // quadrant stadia ticks outside the ring and the 300 m / 500 m hold bars inside it
+  g.shadowColor='rgba(255,40,30,0.9)';g.shadowBlur=4;g.strokeStyle='#ff4a3c';g.lineWidth=3.5;g.lineCap='round';
   g.beginPath();
-  g.moveTo(cx,28);g.lineTo(cx,52);
-  g.moveTo(cx,204);g.lineTo(cx,228);
-  g.moveTo(28,cy);g.lineTo(52,cy);
-  g.moveTo(204,cy);g.lineTo(228,cy);
-  // Elevation BDC range holds (300m & 500m hold bars)
-  g.moveTo(cx-8,154);g.lineTo(cx+8,154);
-  g.moveTo(cx-14,178);g.lineTo(cx+14,178);
+  g.moveTo(cx,cy-r-34);g.lineTo(cx,cy-r-8);
+  g.moveTo(cx,cy+r+8);g.lineTo(cx,cy+r+34);
+  g.moveTo(cx-r-34,cy);g.lineTo(cx-r-8,cy);
+  g.moveTo(cx+r+8,cy);g.lineTo(cx+r+34,cy);
+  g.moveTo(cx-10,cy+34);g.lineTo(cx+10,cy+34);
+  g.moveTo(cx-16,cy+62);g.lineTo(cx+16,cy+62);
   g.stroke();
-  // Center 1 MOA illuminated dot with bright phosphor core
-  g.fillStyle='#ffffff';g.shadowColor='#ff3b30';g.shadowBlur=16;
+  // 1 MOA dot with a white-hot core
+  g.shadowColor='#ff3b30';g.shadowBlur=12;g.fillStyle='#ff5a48';
+  g.beginPath();g.arc(cx,cy,7.5,0,TAU);g.fill();
+  g.shadowBlur=0;g.fillStyle='#ffffff';
   g.beginPath();g.arc(cx,cy,4.2,0,TAU);g.fill();
-  g.fillStyle='#ff3b30';
-  g.beginPath();g.arc(cx,cy+24,2.2,0,TAU);g.fill(); // 300m BDC pip
+  g.fillStyle='#ff4a3c';
+  g.beginPath();g.arc(cx,cy+34,3,0,TAU);g.fill(); // 300m BDC pip
 });
+/* glass edge shading for the reflex sights: clear in the middle, darkening toward the rim, with a
+   faint arc of reflected light across the upper left; the round variant is clipped to a disc for
+   the SMG's tube sight */
+function lensShadeTex(round){
+  return paint(256,256,function(g,w,h){
+    g.clearRect(0,0,w,h);
+    var gr=g.createRadialGradient(128,128,58,128,128,128);
+    gr.addColorStop(0,'rgba(8,10,14,0)');gr.addColorStop(0.6,'rgba(8,10,14,0.06)');gr.addColorStop(0.88,'rgba(8,10,14,0.28)');gr.addColorStop(1,'rgba(8,10,14,0.55)');
+    g.fillStyle=gr;g.fillRect(0,0,w,h);
+    g.strokeStyle='rgba(200,225,255,0.10)';g.lineWidth=14;
+    g.beginPath();g.arc(128,128,96,Math.PI*1.05,Math.PI*1.55);g.stroke();
+    if(round){g.globalCompositeOperation='destination-in';g.fillStyle='#fff';g.beginPath();g.arc(128,128,127,0,TAU);g.fill();g.globalCompositeOperation='source-over';}
+  });
+}
+TX.lensShade=lensShadeTex(false);TX.lensShadeRound=lensShadeTex(true);
+TX.lensShade.wrapS=TX.lensShade.wrapT=TX.lensShadeRound.wrapS=TX.lensShadeRound.wrapT=THREE.ClampToEdgeWrapping;
 
 /* Tactical Shotgun Buckshot Spread Reticle (32 MOA circular pellet spread cone + center bead) */
-TX.shotgunReticle=paint(256,256,function(g,w,h){
+TX.shotgunReticle=paint(512,512,function(g,w,h){
   g.clearRect(0,0,w,h);
-  var cx=128,cy=128;
+  var cx=256,cy=256,r=116,o=24;
   // Circular spread ring matching 12-gauge 8-pellet dispersion at 15m
-  g.strokeStyle='rgba(255,170,40,0.22)';g.lineWidth=10;
-  g.beginPath();g.arc(cx,cy,58,0,TAU);g.stroke();
-  g.strokeStyle='#ffaa28';g.lineWidth=3.2;g.shadowColor='#ff9910';g.shadowBlur=14;
-  g.beginPath();g.arc(cx,cy,58,0,TAU);g.stroke();
-  // 4 Corner acquisition brackets
-  g.lineWidth=3.0;g.strokeStyle='#ffbb44';
-  var r=58,o=12;
-  // Top-left, top-right, bot-left, bot-right notches
+  g.strokeStyle='rgba(255,170,40,0.16)';g.lineWidth=16;
+  g.beginPath();g.arc(cx,cy,r,0,TAU);g.stroke();
+  g.shadowColor='rgba(255,150,20,0.9)';g.shadowBlur=6;g.strokeStyle='#ffb036';g.lineWidth=5;
+  g.beginPath();g.arc(cx,cy,r,0,TAU);g.stroke();
+  g.shadowBlur=0;g.strokeStyle='#fff1d0';g.lineWidth=1.6;
+  g.beginPath();g.arc(cx,cy,r,0,TAU);g.stroke();
+  // 4 acquisition notches
+  g.shadowColor='rgba(255,150,20,0.9)';g.shadowBlur=5;g.strokeStyle='#ffc050';g.lineWidth=4.5;g.lineCap='round';
   g.beginPath();
-  g.moveTo(cx-r-o,cy);g.lineTo(cx-r+4,cy);
-  g.moveTo(cx+r-4,cy);g.lineTo(cx+r+o,cy);
-  g.moveTo(cx,cy-r-o);g.lineTo(cx,cy-r+4);
-  g.moveTo(cx,cy+r-4);g.lineTo(cx,cy+r+o);
+  g.moveTo(cx-r-o,cy);g.lineTo(cx-r+8,cy);
+  g.moveTo(cx+r-8,cy);g.lineTo(cx+r+o,cy);
+  g.moveTo(cx,cy-r-o);g.lineTo(cx,cy-r+8);
+  g.moveTo(cx,cy+r-8);g.lineTo(cx,cy+r+o);
   g.stroke();
   // Center combat bead dot
-  g.fillStyle='#ffffff';g.shadowColor='#ffaa28';g.shadowBlur=16;
-  g.beginPath();g.arc(cx,cy,4.6,0,TAU);g.fill();
+  g.shadowColor='#ffaa28';g.shadowBlur=14;g.fillStyle='#ffc060';
+  g.beginPath();g.arc(cx,cy,10,0,TAU);g.fill();
+  g.shadowBlur=0;g.fillStyle='#ffffff';
+  g.beginPath();g.arc(cx,cy,5.5,0,TAU);g.fill();
 });
 
 /* Vector-9 Precision 2-MOA CQB Red Dot Reticle */
-TX.reflexDot=paint(256,256,function(g,w,h){
+TX.reflexDot=paint(512,512,function(g,w,h){
   g.clearRect(0,0,w,h);
-  var cx=128,cy=128;
+  var cx=256,cy=256;
   // Soft optical bloom
-  var grad=g.createRadialGradient(cx,cy,1,cx,cy,32);
-  grad.addColorStop(0,'rgba(255,40,40,0.85)');
-  grad.addColorStop(0.25,'rgba(255,50,40,0.40)');
-  grad.addColorStop(0.65,'rgba(255,30,20,0.10)');
+  var grad=g.createRadialGradient(cx,cy,2,cx,cy,44);
+  grad.addColorStop(0,'rgba(255,60,50,0.90)');
+  grad.addColorStop(0.30,'rgba(255,50,40,0.35)');
+  grad.addColorStop(0.70,'rgba(255,30,20,0.08)');
   grad.addColorStop(1,'rgba(255,0,0,0)');
   g.fillStyle=grad;g.fillRect(0,0,w,h);
-  // Ultra-crisp 2-MOA center red dot with white-hot core
-  g.fillStyle='#ffffff';g.shadowColor='#ff2a20';g.shadowBlur=18;
-  g.beginPath();g.arc(cx,cy,5.0,0,TAU);g.fill();
+  // Crisp 2-MOA dot with a white-hot core
+  g.shadowColor='#ff2a20';g.shadowBlur=12;g.fillStyle='#ff6a5a';
+  g.beginPath();g.arc(cx,cy,11,0,TAU);g.fill();
+  g.shadowBlur=0;g.fillStyle='#ffffff';
+  g.beginPath();g.arc(cx,cy,6.5,0,TAU);g.fill();
 });
 
 /* Apex-50 3D Sniper Scope Glass Reticle (Fine Mil-Dot Crosshairs & Stadia) */
@@ -874,13 +939,15 @@ var M={
   tileCol:mat(rep(TX.tile,.18,1.5),{rough:1,metal:.02,normal:rep(TX.tileBump,.18,1.5),ns:.55,roughMap:rep(TX.tileRough,.18,1.5),envMapI:.55}),
   wainscot:mat(rep(TX.wainscot,16,1),{rough:1,metal:.06,roughMap:rep(TX.wainscotRough,16,1),envMapI:.58}),
   floor:mat(rep(TX.concrete,2,12),{rough:1,metal:.03,normal:rep(TX.concBump,2,12),ns:.55,roughMap:rep(TX.concRough,2,12),envMapI:.48}),
-  gravel:mat(rep(TX.gravel,12,64),{rough:.96,envMapI:.15}),
+  gravel:mat(rep(TX.gravel,12,64),{rough:1,metal:.02,normal:rep(TX.gravelNormal,12,64),ns:.85,
+    roughMap:rep(TX.gravelRough,12,64),envMapI:.18}),
   metal:mat(rep(TX.metal,1,1),{rough:1,metal:.8,normal:TX.metalNormal,ns:.35,roughMap:TX.metalRough,envMapI:.65}),
   metalLong:plain(0x353f42,.44,.86,.65),
   rail:plain(0xdee3e1,.12,.98,1.1),
   railRust:mat(rep(TX.rust,1,24),{rough:.88,metal:.35,envMapI:.15}),
   sleeper:plain(0x47443e,.92,.05,.1),
-  panel:mat(rep(TX.panel,6,26),{rough:1,roughMap:rep(TX.panelRough,6,26),envMapI:.15}),
+  panel:mat(rep(TX.panel,6,26),{rough:1,normal:rep(TX.panelNormal,6,26),ns:.55,
+    roughMap:rep(TX.panelRough,6,26),envMapI:.15}),
   tactile:mat(rep(TX.tactile,1,72),{rough:.58,metal:.12,envMapI:.30}),
   paintLine:mat(rep(TX.paintLine,1,60),{rough:.68,metal:.02,envMapI:.35}),
   grime:mat(rep(TX.grime,4,3),{rough:1,envMapI:.1}),
@@ -888,8 +955,17 @@ var M={
   dark:plain(0x0c1416,.92,0,.1),
   black:new THREE.MeshBasicMaterial({color:0x030608}),
   train:mat(rep(TX.train,3,1),{rough:1,metal:.75,color:0xb4bebf,normal:rep(TX.trainNormal,3,1),ns:.45,roughMap:rep(TX.trainRough,3,1),envMapI:.75}),
-  glass:new THREE.MeshStandardMaterial({color:0x1a363c,roughness:.04,metalness:.85,transparent:true,opacity:.52}),
-  lamp:new THREE.MeshBasicMaterial({map:TX.lampFace,color:0xf8f6ee}),
+  /* glass is a dielectric: at metalness .85 three strips almost all the diffuse and tints the
+     specular with the base colour, so every train window, cab screen, vending front and kiosk
+     panel rendered as dark teal chrome. Metalness 0 and a pale tint let the envMap carry it. */
+  glass:new THREE.MeshStandardMaterial({color:0x93aab1,roughness:.06,metalness:0,transparent:true,opacity:.5,envMapIntensity:1.2}),
+  /* A diffuser at 0.97 was the brightest thing the old 8-bit buffer could hold, so the lamps sat
+     at the same level as a white tile and bloomed like one. In linear HDR they can be what they
+     are: well past 1.0, which is what the bloom threshold is now looking for. */
+  lamp:new THREE.MeshBasicMaterial({map:TX.lampFace,color:new THREE.Color(0xf8f6ee).multiplyScalar(3.4)}),
+  /* a shot-out tube: the diffuser stops emitting and becomes a piece of dirty plastic, so it is
+     lit by the room like everything else instead of lighting it */
+  lampDead:new THREE.MeshStandardMaterial({map:TX.lampFace,color:0x2b2f33,roughness:0.82,metalness:0.05}),
   paint:plain(0x243236,.60,.20,.38),
   orange:plain(0xc1502a,.56,.08,.32),
   conduit:plain(0x828b90,.46,.88,.65),
@@ -945,7 +1021,12 @@ function bakeSurface(W,H,toWorld,nx,ny,nz,emitters,occluders,opt){
       var E=sm.p*cos*lobe/(d2+0.35);
       r+=E*sm.r;g+=E*sm.g;bl+=E*sm.b;
     }
-    var i=(py*W+px)*4,k2=gain*ao;
+    /* The same occlusion is written into the aoMap a few lines down, and r128 runs aomap_fragment
+       after lights_fragment_maps, so folding it in here as well attenuated the baked irradiance by
+       ao squared: every crease, wainscot bottom and prop base was darker than the bake's own model
+       says, which crushed exactly the range the light map was tuned to carry. The light map now
+       holds pure irradiance and the aoMap applies the occlusion once. */
+    var i=(py*W+px)*4,k2=gain;
     ld[i]=Math.round(255*Math.pow(Math.min(1,r*k2),1/2.2));
     ld[i+1]=Math.round(255*Math.pow(Math.min(1,g*k2),1/2.2));
     ld[i+2]=Math.round(255*Math.pow(Math.min(1,bl*k2),1/2.2));
