@@ -166,7 +166,8 @@ var GYRO = {
   lastEventT: null,   // wall clock of the last sensor event, for real dt
   lastMotionT: 0,     // last devicemotion with a usable rate, for the fallback watchdog
   hz: 0,              // measured sensor reporting rate, for the diagnostic readout
-  events: 0           // total sensor events seen
+  events: 0,          // total sensor events seen
+  rawA: null, rawB: null, rawG: null   // last raw axes, shown in the readout
 };
 
 /* Real elapsed time between sensor events. Neither devicemotion nor deviceorientation
@@ -195,9 +196,10 @@ function updateGyroDiag(){
     ((typeof performance !== 'undefined' ? performance.now() : Date.now()) - GYRO.lastEventT);
   if(!GYRO.events){ el.textContent = 'Waiting for the first sensor event...'; return; }
   if(age > 1000){ el.textContent = src + ' - stopped reporting (' + Math.round(age / 1000) + 's ago)'; return; }
-  el.textContent = src + ' - ' + Math.round(GYRO.hz) + ' Hz - yaw ' +
-    GYRO.smoothYawRate.toFixed(1) + ' deg/s - pitch ' + GYRO.smoothPitchRate.toFixed(1) +
-    ' deg/s - screen ' + GYRO.screenAngle + ' deg';
+  el.textContent = src + ' - ' + Math.round(GYRO.hz) + ' Hz - screen ' + GYRO.screenAngle +
+    ' deg' + (GYRO.rawA === null ? '' :
+      ' - raw a/b/g ' + GYRO.rawA.toFixed(0) + '/' + GYRO.rawB.toFixed(0) + '/' + GYRO.rawG.toFixed(0)) +
+    ' - yaw ' + GYRO.smoothYawRate.toFixed(1) + ' pitch ' + GYRO.smoothPitchRate.toFixed(1) + ' deg/s';
 }
 
 // Check platform hardware support
@@ -427,23 +429,43 @@ function handleDeviceMotion(e){
   var angle = GYRO.screenAngle;
   var rawYaw = 0, rawPitch = 0;
 
+  /* rotationRate does NOT use the same axis letters as deviceorientation.
+       deviceorientation:  alpha = Z, beta = X, gamma = Y
+       rotationRate:       alpha = X, beta = Y, gamma = Z
+     The spec originally documented rotationRate the first way; W3C PR
+     w3c/deviceorientation#43 (Aug 2017) rewrote it to the second because
+     "Chrome on Android, Firefox browser on Android, and Safari browser on iPhone,
+     they all implement rotationRate as" x->alpha, y->beta, z->gamma. The current
+     spec (CRD 2025-02-12) states it outright: "The alpha getter steps are to return
+     the value of this's x axis rotation rate ... beta ... y axis ... gamma ... z axis".
+
+     This block was written against the old text, so it read beta as X and gamma as Y.
+     Gamma is the Z axis - roll, straight out of the screen - which meant that in
+     landscape the view pitched when the handset was tilted like a steering wheel,
+     while real pitch was being fed into yaw. X and Y are alpha and beta; the signs
+     below are unchanged and match the deviceorientation path, so both sensor sources
+     agree and switching between them cannot flip the controls. */
+  var rateX = (rate.alpha || 0);   /* rotation rate about the device X axis */
+  var rateY = (rate.beta || 0);    /* rotation rate about the device Y axis */
+  GYRO.rawA = rateX; GYRO.rawB = rateY; GYRO.rawG = (rate.gamma || 0);
+
   // Angular rate mapping based on screen orientation
   if(angle === 90){
     // Landscape-Left (top left, home button right - standard landscape)
-    rawYaw = -(rate.beta || 0);
-    rawPitch = -(rate.gamma || 0);
+    rawYaw = -rateX;
+    rawPitch = -rateY;
   } else if(angle === 270 || angle === -90){
     // Landscape-Right (top right, home button left)
-    rawYaw = (rate.beta || 0);
-    rawPitch = (rate.gamma || 0);
+    rawYaw = rateX;
+    rawPitch = rateY;
   } else if(angle === 180){
     // Inverted portrait
-    rawYaw = (rate.gamma || 0);
-    rawPitch = -(rate.beta || 0);
+    rawYaw = rateY;
+    rawPitch = -rateX;
   } else {
     // Portrait (angle 0)
-    rawYaw = -(rate.gamma || 0);
-    rawPitch = (rate.beta || 0);
+    rawYaw = -rateY;
+    rawPitch = rateX;
   }
 
   processGyroMotion(rawYaw, rawPitch, dt);
