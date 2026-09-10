@@ -1170,3 +1170,63 @@ h2{font-weight:600;letter-spacing:-.03em}
 @media (max-height:600px) and (orientation:landscape){
   #hint{top:calc(80px + env(safe-area-inset-top))}
 }
+
+/* ============================================================================
+   Touch controls, matched to the reference layout
+   Sampled from the supplied screenshot: button fill rgb(43,43,43), glyphs
+   rgb(215,215,215), page rgb(53,53,53) - the whole cluster is neutral. There
+   is no accent colour, no glow and no coloured border anywhere in it, and the
+   combat buttons carry no text label; only the readouts that hold a value
+   (grenade count, weapon name) show type.
+   ============================================================================ */
+
+.tbtn{
+  background:rgba(26,28,30,.62);
+  border:1px solid rgba(255,255,255,.17);
+  box-shadow:none;
+  -webkit-backdrop-filter:none;backdrop-filter:none;
+  color:#d7d7d7;
+}
+.touch-active .tbtn{box-shadow:none}
+.tbtn:active,.tbtn.active,.tbtn.pressed{
+  transform:scale(.94);
+  background:rgba(255,255,255,.20);
+  border-color:rgba(255,255,255,.34);
+  box-shadow:none;
+}
+
+/* the glyphs are one neutral tone, not a palette */
+.tbtn .t-svg{color:#e2e2e2}
+#t-fire .t-svg,#t-ads .t-svg,#t-reload .t-svg,#t-nade .t-svg,#t-jump .t-svg,
+#t-crouch .t-svg,#t-inspect .t-svg,#t-sprint .t-svg{color:#e2e2e2}
+
+/* no coloured rings or fills on any individual button */
+#t-fire,#t-ads,#t-reload,#t-nade,#t-switch,#t-jump,#t-crouch,#t-inspect,#t-sprint{
+  border-color:rgba(255,255,255,.17);
+  background:rgba(26,28,30,.62);
+}
+#t-ads.active,#t-crouch.active,#t-sprint.active{
+  border-color:rgba(255,255,255,.34);background:rgba(255,255,255,.20);box-shadow:none;
+}
+/* the fire button in the reference is a thin light ring over the scene, not a filled disc */
+#t-fire{
+  background:rgba(20,22,24,.34);
+  border:1.5px solid rgba(255,255,255,.55);
+}
+#t-fire:active{background:rgba(255,255,255,.20);border-color:rgba(255,255,255,.85)}
+
+/* combat buttons are unlabelled; only a value-bearing readout keeps its type.
+   These need two ids to outrank '#t-nade .tbtn-sub' / '#t-switch .tbtn-sub',
+   which are id+class and would otherwise keep both readouts amber. */
+.tbtn-sub{display:none}
+#t-nade #t-nade-count,#t-switch #t-wpn-label{display:block;color:#d7d7d7;font-size:8px;letter-spacing:.1em}
+.t-wpn-badge{color:#fff;text-shadow:none}
+#t-switch{border-radius:50%}
+
+/* the stick matches: neutral rim, pale knob, no amber cast */
+#stick{border-color:rgba(255,255,255,.22);box-shadow:none;
+  background:radial-gradient(circle,rgba(20,22,24,.55) 0%,rgba(20,22,24,.18) 70%,transparent 100%)}
+#stick.active{border-color:rgba(255,255,255,.45);box-shadow:none}
+#knob{background:radial-gradient(circle at 38% 34%,#f2f2f2 0%,#c9c9c9 60%,#8e8e8e 100%);
+  border:1px solid rgba(255,255,255,.55);box-shadow:0 2px 8px rgba(0,0,0,.6)}
+#stick-sprint-lock.locked{color:#fff;text-shadow:none}
