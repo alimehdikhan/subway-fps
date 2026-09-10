@@ -226,7 +226,9 @@ h2{font-size:clamp(26px,5vw,38px);line-height:1;letter-spacing:-.02em;margin:12p
   border-color:var(--amber);box-shadow:0 0 20px rgba(232,163,61,.75), inset 0 0 10px rgba(232,163,61,.4);
 }
 .tbtn-inner{display:flex;flex-direction:column;align-items:center;justify-content:center;pointer-events:none}
-.t-svg{width:22px;height:22px;stroke:currentColor;fill:currentColor}
+/* fill/stroke belong to each glyph, not to this rule: a blanket fill:currentColor here
+   beats the fill="none" presentation attribute on an outline icon and floods it solid. */
+.t-svg{width:22px;height:22px}
 .tbtn-sub{font-size:8.5px;letter-spacing:0.12em;font-weight:800;margin-top:1px;text-transform:uppercase}
 
 /* Specific Combat Buttons */
