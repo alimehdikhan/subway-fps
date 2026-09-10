@@ -456,6 +456,9 @@ function springStep(s,posKey,velKey,target,w,z,dt){
 }
 function update(dt){
   G.time+=dt;
+  /* Gyro aim is integrated here rather than inside the sensor callback, so the turn
+     tracks real time and lands on the same clock as the rest of the frame. */
+  if(typeof applyGyroLook==='function')applyGyroLook(dt);
   P.fireCd=Math.max(mouseDown?-dt:0,P.fireCd-dt);
   P.inv=Math.max(0,P.inv-dt);
   P.shake=Math.max(0,P.shake-dt*0.6);

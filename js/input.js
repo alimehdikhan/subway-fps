@@ -152,6 +152,7 @@ var GYRO = {
   deadzone: 0.005,  // Rate/angle deadzone to eliminate sensor jitter (0.0 to 0.025)
   invertY: false,   // Invert vertical pitch
   invertX: false,   // Invert horizontal yaw
+  mode: 'always',   // 'always' | 'scope' - scope only lets the thumb do the big turns
 
   // Runtime tracking & filtering
   screenAngle: 0,
@@ -161,8 +162,19 @@ var GYRO = {
   smoothYawRate: 0,
   smoothPitchRate: 0,
   hasMotionRate: false,
-  listenerActive: false
+  listenerActive: false,
+  lastEventT: null,   // wall clock of the last sensor event, for real dt
+  lastMotionT: 0      // last devicemotion with a usable rate, for the fallback watchdog
 };
+
+/* Real elapsed time between sensor events. Neither devicemotion nor deviceorientation
+   carries a timestamp that is comparable across browsers, so measure it here. */
+function gyroEventDt(){
+  var now = (typeof performance !== 'undefined' ? performance.now() : Date.now());
+  var dt = (GYRO.lastEventT === null) ? (1 / 60) : (now - GYRO.lastEventT) / 1000;
+  GYRO.lastEventT = now;
+  return clamp(dt, 0.002, 0.1);
+}
 
 // Check platform hardware support
 function checkGyroSupport(){
@@ -188,6 +200,7 @@ function loadGyroSettings(){
       if(typeof d.deadzone === 'number') GYRO.deadzone = clamp(d.deadzone, 0.0, 0.03);
       if(typeof d.invertY === 'boolean') GYRO.invertY = d.invertY;
       if(typeof d.invertX === 'boolean') GYRO.invertX = d.invertX;
+      if(d.mode === 'always' || d.mode === 'scope') GYRO.mode = d.mode;
     }
   }catch(e){}
   updateGyroScreenAngle();
@@ -201,7 +214,8 @@ function saveGyroSettings(){
       smoothing: GYRO.smoothing,
       deadzone: GYRO.deadzone,
       invertY: GYRO.invertY,
-      invertX: GYRO.invertX
+      invertX: GYRO.invertX,
+      mode: GYRO.mode
     }));
   }catch(e){}
 }
@@ -232,7 +246,15 @@ function recenterGyro(){
   GYRO.lastAlpha = null;
   GYRO.smoothYawRate = 0;
   GYRO.smoothPitchRate = 0;
+  GYRO.lastEventT = null;   /* drop the timing baseline too, or the next event
+                               integrates the whole gap since the last one */
 }
+
+/* Coming back from the background leaves a stale angle baseline and a long gap; both
+   would land as one lurch on the first event. Start clean instead. */
+document.addEventListener('visibilitychange', function(){
+  if(!document.hidden) recenterGyro();
+});
 
 function updateGyroUI(){
   var active = GYRO.enabled && (GYRO.status === 'granted' || GYRO.status === 'prompt');
@@ -283,10 +305,15 @@ function updateGyroUI(){
   if($('gyro-deadzone-slider')) $('gyro-deadzone-slider').value = GYRO.deadzone;
   if($('gyro-deadzone-val')) $('gyro-deadzone-val').textContent = GYRO.deadzone.toFixed(3);
 
+  if($('gyro-mode-val')) $('gyro-mode-val').textContent = (GYRO.mode === 'scope' ? 'Scope only' : 'Always');
   if($('gyro-invert-y')) $('gyro-invert-y').checked = GYRO.invertY;
   if($('gyro-invert-x')) $('gyro-invert-x').checked = GYRO.invertX;
 }
 
+/* The sensor half only filters. It maintains a smoothed angular RATE in deg/s and
+   never touches the camera; applyGyroLook() integrates that rate once per rendered
+   frame. Splitting it this way is what makes the aim independent of how often a
+   given phone happens to fire its sensor. */
 function processGyroMotion(rawYawRate, rawPitchRate, dt){
   if(!GYRO.enabled || G.state !== 'play') {
     GYRO.smoothYawRate = 0;
@@ -294,8 +321,10 @@ function processGyroMotion(rawYawRate, rawPitchRate, dt){
     return;
   }
 
-  // Deadzone filter to suppress sensor noise & tabletop vibrations
-  var dz = GYRO.deadzone;
+  /* Deadzone suppresses sensor noise and tabletop vibration. Rates are deg/s while the
+     stored setting is a small fraction, so scale it into the same units - as written a
+     0.005 deadzone against a deg/s rate filtered nothing at all. */
+  var dz = GYRO.deadzone * 60;
   var yawRate = 0, pitchRate = 0;
   if(Math.abs(rawYawRate) > dz){
     yawRate = (rawYawRate > 0 ? 1 : -1) * (Math.abs(rawYawRate) - dz);
@@ -304,32 +333,46 @@ function processGyroMotion(rawYawRate, rawPitchRate, dt){
     pitchRate = (rawPitchRate > 0 ? 1 : -1) * (Math.abs(rawPitchRate) - dz);
   }
 
-  // Exponential Moving Average (EMA) smoothing filter
-  var alpha = clamp(1.0 - GYRO.smoothing, 0.08, 1.0);
+  /* Time-corrected EMA. A fixed per-event weight smooths by however often the sensor
+     fires, so one setting felt different on a 60Hz and a 120Hz phone. Read the setting
+     as the weight it used to produce at 60Hz, turn that into a time constant, and
+     re-derive the weight for this event's real dt. */
+  var a60 = clamp(1.0 - GYRO.smoothing, 0.08, 1.0);
+  var alpha = 1;
+  if(a60 < 1){
+    var tau = -(1 / 60) / Math.log(1 - a60);
+    alpha = 1 - Math.exp(-dt / tau);
+  }
   GYRO.smoothYawRate += (yawRate - GYRO.smoothYawRate) * alpha;
   GYRO.smoothPitchRate += (pitchRate - GYRO.smoothPitchRate) * alpha;
+}
 
-  // Base sensitivity factor
-  var baseSens = 0.0034 * GYRO.sens;
+/* Integrate the smoothed rate into the camera, once per rendered frame.
+   The rate is deg/s, so this frame's turn is rate * dt. The old code multiplied the
+   rate by a constant inside the sensor handler and ignored dt entirely - it was a
+   parameter the body never read, and every caller passed a hardcoded 0.016. That fixed
+   the turn per EVENT rather than per second: a phone delivering devicemotion at 120Hz
+   aimed twice as fast as one at 60Hz, and a frame that happened to receive no event
+   did not turn at all. 0.204 is the old 0.0034 per event times the 60Hz it was tuned
+   against, so the feel at 60Hz is unchanged. */
+function applyGyroLook(dt){
+  if(!GYRO.enabled || G.state !== 'play' || typeof P === 'undefined') return;
+  if(!(dt > 0)) return;
+  if(dt > 0.1) dt = 0.1;              /* after a stall, do not fling the camera */
 
-  // Scoped / ADS reduction:
-  // Smoothly scales down based on ADS progression
-  var adsProg = (typeof P !== 'undefined' && P.ads) ? P.ads : 0;
+  var baseSens = 0.204 * GYRO.sens;
+  var adsProg = P.ads || 0;
+  /* Scope only: ride the ADS progression rather than switching at a threshold, so the
+     gyro fades in as the sights come up instead of snapping on part-way through. */
+  if(GYRO.mode === 'scope'){
+    if(adsProg <= 0.001) return;
+    baseSens *= adsProg;
+  }
   var adsFactor = lerp(1.0, GYRO.adsSens, adsProg);
+  if(P.curWpn === 3 && adsProg > 0.5) adsFactor *= 0.50;   /* railgun 3x optic */
 
-  // Weapon-specific optic scaling (e.g. Railgun 3x optic has extra zoom reduction)
-  if(typeof P !== 'undefined' && P.curWpn === 3 && adsProg > 0.5){
-    adsFactor *= 0.50;
-  }
-
-  var dyaw = GYRO.smoothYawRate * baseSens * adsFactor * (GYRO.invertX ? -1 : 1);
-  var dpitch = GYRO.smoothPitchRate * baseSens * adsFactor * (GYRO.invertY ? 1 : -1);
-
-  // Additive camera blending with zero-jump integration
-  if(typeof P !== 'undefined'){
-    P.yaw += dyaw;
-    P.pitch = clamp(P.pitch + dpitch, -1.3, 1.3);
-  }
+  P.yaw += GYRO.smoothYawRate * baseSens * adsFactor * dt * (GYRO.invertX ? -1 : 1);
+  P.pitch = clamp(P.pitch + GYRO.smoothPitchRate * baseSens * adsFactor * dt * (GYRO.invertY ? 1 : -1), -1.3, 1.3);
 }
 
 // Handler for DeviceMotionEvent (rotationRate in deg/s)
@@ -338,6 +381,8 @@ function handleDeviceMotion(e){
   var rate = e.rotationRate;
   if(!rate || (rate.alpha === null && rate.beta === null && rate.gamma === null)) return;
   GYRO.hasMotionRate = true;
+  GYRO.lastMotionT = (typeof performance !== 'undefined' ? performance.now() : Date.now());
+  var dt = gyroEventDt();
 
   var angle = GYRO.screenAngle;
   var rawYaw = 0, rawPitch = 0;
@@ -361,12 +406,21 @@ function handleDeviceMotion(e){
     rawPitch = (rate.beta || 0);
   }
 
-  processGyroMotion(rawYaw, rawPitch, 0.016);
+  processGyroMotion(rawYaw, rawPitch, dt);
 }
 
 // Fallback handler for DeviceOrientationEvent (euler angles beta, gamma)
 function handleDeviceOrientation(e){
-  if(GYRO.hasMotionRate) return; // Prefer devicemotion rotationRate when active
+  /* Prefer devicemotion's rotationRate, but only while it is actually arriving. Some
+     Android browsers stop delivering a usable rate after a permission prompt or a
+     visibility change; latching this flag on for the rest of the session left gyro
+     dead with the fallback permanently switched off. Half a second of silence hands
+     control back to the orientation path. */
+  if(GYRO.hasMotionRate){
+    var mNow = (typeof performance !== 'undefined' ? performance.now() : Date.now());
+    if(mNow - GYRO.lastMotionT < 500) return;
+    GYRO.hasMotionRate = false;
+  }
   if(!GYRO.enabled || G.state !== 'play'){
     GYRO.lastBeta = null;
     GYRO.lastGamma = null;
@@ -403,7 +457,11 @@ function handleDeviceOrientation(e){
       rawPitch = dBeta;
     }
 
-    processGyroMotion(rawYaw, rawPitch, 0.016);
+    /* beta/gamma are absolute angles, so these deltas are degrees-per-event. The
+       filter and the integrator both work in deg/s, so convert before handing over -
+       previously an angle delta was fed in as though it were already a rate. */
+    var oDt = gyroEventDt();
+    processGyroMotion(rawYaw / oDt, rawPitch / oDt, oDt);
   }
 
   GYRO.lastBeta = b;
@@ -993,6 +1051,11 @@ if($('layout-cancel')) $('layout-cancel').addEventListener('click', function(){ 
   if(btn) btn.addEventListener('click', openGyroModal);
 });
 
+if($('gyro-mode-toggle')) $('gyro-mode-toggle').addEventListener('click', function(){
+  GYRO.mode = (GYRO.mode === 'scope' ? 'always' : 'scope');
+  GYRO.smoothYawRate = 0; GYRO.smoothPitchRate = 0;
+  saveGyroSettings(); updateGyroUI();
+});
 if($('gyro-close')) $('gyro-close').addEventListener('click', closeGyroModal);
 if($('gyro-done-btn')) $('gyro-done-btn').addEventListener('click', closeGyroModal);
 if($('gyro-enable-btn')) $('gyro-enable-btn').addEventListener('click', toggleGyro);
