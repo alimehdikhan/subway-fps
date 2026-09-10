@@ -1,4 +1,4 @@
-/* Last Train — audio.js
+/* Subway FPS — audio.js
    Web Audio synthesis: every sound effect, the ambience bed and positional playback.
    All game scripts share one global scope and load in the order listed in index.html. */
 'use strict';

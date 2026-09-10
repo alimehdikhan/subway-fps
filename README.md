@@ -9,7 +9,7 @@ with no build step. Open `index.html` from any static server or play instantly i
 
 ## Modes
 
-- **Last Train** — hold the platform through five waves, then board the train when it rolls in.
+- **Subway FPS** — hold the platform through five waves, then board the train when it rolls in.
 - **Overtime** — endless. Waves are rolled from a weighted pool that gets nastier every round, and every
   unit gets a little tougher and quicker. No train is coming; the run ends when you fall.
 - **Difficulty** (Easy / Normal / Hard) scales enemy health, enemy damage and score. Best scores for

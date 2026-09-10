@@ -1,4 +1,4 @@
-/* Last Train — models.js
+/* Subway FPS — models.js
    Swaps procedural view models for the GLB models in /models: the AK-47 takes the rifle slot,
    the pump shotgun the shotgun slot, the Quaternius assault rifle the third slot and the pistol
    the sidearm slot. Each model is loaded with THREE.GLTFLoader, re-oriented and scaled into weapon

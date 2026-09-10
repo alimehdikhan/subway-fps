@@ -1,4 +1,4 @@
-/* Last Train — core.js
+/* Subway FPS — core.js
    Bootstrap: DOM helper, error screen, renderer, scene, cameras and the post-processing passes.
    All game scripts share one global scope and load in the order listed in index.html. */
 'use strict';

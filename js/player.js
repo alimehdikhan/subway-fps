@@ -1,4 +1,4 @@
-/* Last Train — player.js
+/* Subway FPS — player.js
    Player and match state, waves tables, shooting, grenades, damage intake and the per-frame update.
    All game scripts share one global scope and load in the order listed in index.html. */
 'use strict';

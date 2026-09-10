@@ -1,4 +1,4 @@
-/* Last Train — hands.js
+/* Subway FPS — hands.js
    First-person hands and arms. Loads after handling.js and rebuilds the hands on every weapon:
    real-scale gloved hands whose fingers are wrapped numerically around each weapon's contact
    volumes (a finger curls joint by joint until it meets the grip, the palm is pushed out of the

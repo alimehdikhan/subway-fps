@@ -1,4 +1,4 @@
-/* Last Train — world.js
+/* Subway FPS — world.js
    The station geometry, train, props, explosive barrels, lighting, baked light, gibs and
    collision maths. All game scripts share one global scope and load in the order listed in
    index.html. */

@@ -1,4 +1,4 @@
-/* Last Train — flow.js
+/* Subway FPS — flow.js
    Wave progression, the train, HUD, minimap, run start/pause/finish and best scores.
    All game scripts share one global scope and load in the order listed in index.html. */
 'use strict';
@@ -210,7 +210,7 @@ var BEST={story:0,storyWin:false,endless:0,endlessWave:0};
 try{var sb=JSON.parse(localStorage.getItem('lt-best-v1')||'null');if(sb&&typeof sb==='object'){for(var bk in BEST)if(sb[bk]!==undefined)BEST[bk]=sb[bk];}}catch(err){}
 function saveBest(){try{localStorage.setItem('lt-best-v1',JSON.stringify(BEST));}catch(err){}}
 function bestText(){
-  var a=BEST.story?('Last Train best <b>'+BEST.story.toLocaleString()+'</b>'+(BEST.storyWin?' · made the train':'')):'Last Train best <b>—</b>';
+  var a=BEST.story?('Subway FPS best <b>'+BEST.story.toLocaleString()+'</b>'+(BEST.storyWin?' · made the train':'')):'Subway FPS best <b>—</b>';
   var b=BEST.endless?('Overtime best <b>wave '+BEST.endlessWave+'</b> · '+BEST.endless.toLocaleString()):'Overtime best <b>—</b>';
   return a+'<br>'+b;
 }
@@ -291,10 +291,10 @@ function finish(win){
   saveBest();refreshBest();
   $('newbest').className=newBest?'on':'';
   $('overline').textContent=endless?'Overrun':(win?'Doors closing':'End of the line');
-  var title=endless?('Held for '+G.wave+(G.wave===1?' wave':' waves')):(win?'You made the last train':'Signal lost');
+  var title=endless?('Held for '+G.wave+(G.wave===1?' wave':' waves')):(win?'You made the train':'Signal lost');
   $('overtitle').childNodes[0].textContent=title;
   $('overtext').textContent=endless?('No train was ever coming. The machines took the platform back on wave '+G.wave+' · '+DIFFS[diffKey].label+'.')
-    :(win?'Northgate is behind you. The platform stays with the machines.'
+    :(win?'The station is behind you. The platform stays with the machines.'
     :'The units still own the platform. The 04:12 left without you.');
   $('f-score').textContent=G.score.toLocaleString();
   $('f-kills').textContent=G.kills;

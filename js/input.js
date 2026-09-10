@@ -1,4 +1,4 @@
-/* Last Train — input.js
+/* Subway FPS — input.js
    Keyboard, mouse, touch controls, gyro, fullscreen and menu toggles.
    All game scripts share one global scope and load in the order listed in index.html. */
 'use strict';

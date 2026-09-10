@@ -1,4 +1,4 @@
-/* Last Train — enemies.js
+/* Subway FPS — enemies.js
    Enemy types, difficulty, damage numbers, medals, deaths, enemy bolts and pickups.
    All game scripts share one global scope and load in the order listed in index.html. */
 'use strict';
