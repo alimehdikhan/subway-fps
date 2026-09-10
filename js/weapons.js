@@ -6,36 +6,42 @@
 /* ============================ weapon view model & arsenal ============================ */
 var WEAPONS=[
   {
-    id:'carbine',name:'RM-4 VIPER CARBINE',sub:'SELECT FIRE · 5.56×45MM NATO',
+    id:'carbine',name:'AK-47 RIFLE',sub:'SELECT FIRE · 7.62×39MM',
     magMax:30,reserveMax:120,fireRate:0.096,reloadTac:1.15,reloadDry:1.70,
     dmgHead:80,dmgBody:32,dmgLegs:20,pellets:1,spreadBase:0.010,spreadWalk:0.008,spreadAir:0.018,
-    adsFov:52,adsY:-0.068,recoilKick:1.0,recoilPitch:0.016,recoilYaw:0.004,casingType:0,tracerCol:0xffe4b8,hasLaser:true
-    adsFov:50,adsY:-0.068,adsZ:-0.22,recoilKick:1.0,recoilPitch:0.016,recoilYaw:0.004,casingType:0,tracerCol:0xffe4b8,hasLaser:true,adsSpeed:19
-    adsFov:50,adsY:-0.068,adsZ:-0.34,recoilKick:1.0,recoilPitch:0.016,recoilYaw:0.004,casingType:0,tracerCol:0xffe4b8,hasLaser:true,adsSpeed:19
+    adsFov:50,adsY:-0.068,adsZ:-0.14,recoilKick:1.0,recoilPitch:0.016,recoilYaw:0.004,casingType:0,tracerCol:0xffe4b8,hasLaser:true,adsSpeed:19,
+    hip:[0.025,-0.014,0.025],carryRot:[0.055,0.18,0.09]
   },
   {
-    id:'shotgun',name:'BREACHER-12 SHOTGUN',sub:'12-GAUGE BUCK · PUMP ACTION',
+    id:'shotgun',name:'S1897 SHOTGUN',sub:'12-GAUGE BUCK · PUMP ACTION',
     magMax:8,reserveMax:40,fireRate:0.65,reloadTac:1.40,reloadDry:2.05,
     dmgHead:36,dmgBody:18,dmgLegs:11,pellets:8,spreadBase:0.046,spreadWalk:0.016,spreadAir:0.032,
-    adsFov:62,adsY:-0.052,recoilKick:1.8,recoilPitch:0.038,recoilYaw:0.007,casingType:1,tracerCol:0xffaa33,hasLaser:false
-    adsFov:62,adsY:-0.052,adsZ:-0.20,recoilKick:1.8,recoilPitch:0.038,recoilYaw:0.007,casingType:1,tracerCol:0xffaa33,hasLaser:false,adsSpeed:16
-    adsFov:62,adsY:-0.052,adsZ:-0.32,recoilKick:1.8,recoilPitch:0.038,recoilYaw:0.007,casingType:1,tracerCol:0xffaa33,hasLaser:false,adsSpeed:16
+    adsFov:62,adsY:-0.066,adsZ:-0.16,recoilKick:1.8,recoilPitch:0.038,recoilYaw:0.007,casingType:1,tracerCol:0xffaa33,hasLaser:false,adsSpeed:16,
+    hip:[0.035,-0.025,-0.015],carryRot:[0.045,0.20,0.08]
   },
   {
-    id:'smg',name:'VECTOR-9 SMG',sub:'9×19MM · 1050 RPM RAPID',
-    magMax:36,reserveMax:160,fireRate:0.056,reloadTac:1.05,reloadDry:1.45,
+    /* 0.0706 s between rounds is 850 rpm, the HK416's factory cyclic rate; it was 0.056 (1071 rpm)
+       while this slot was a 9 mm SMG, which is far faster than the rifle it now is */
+    id:'smg',name:'M416 ASSAULT RIFLE',sub:'5.56×45MM · 850 RPM',
+    magMax:36,reserveMax:160,fireRate:0.0706,reloadTac:1.05,reloadDry:1.45,
     dmgHead:46,dmgBody:19,dmgLegs:13,pellets:1,spreadBase:0.016,spreadWalk:0.012,spreadAir:0.024,
-    adsFov:58,adsY:-0.056,recoilKick:0.62,recoilPitch:0.010,recoilYaw:0.005,casingType:2,tracerCol:0xfff2a8,hasLaser:true
-    adsFov:56,adsY:-0.065,adsZ:-0.21,recoilKick:0.62,recoilPitch:0.010,recoilYaw:0.005,casingType:2,tracerCol:0xfff2a8,hasLaser:true,adsSpeed:23
-    adsFov:56,adsY:-0.065,adsZ:-0.32,recoilKick:0.62,recoilPitch:0.010,recoilYaw:0.005,casingType:2,tracerCol:0xfff2a8,hasLaser:true,adsSpeed:23
+    adsFov:56,adsY:-0.065,adsZ:-0.11,recoilKick:0.62,recoilPitch:0.010,recoilYaw:0.005,casingType:2,tracerCol:0xfff2a8,hasLaser:true,adsSpeed:23,
+    hip:[0.018,-0.012,0.025],carryRot:[0.05,0.17,0.085]
   },
   {
     id:'railgun',name:'APEX-50 RAILGUN',sub:'15KV HYPER-VELOCITY ION',
     magMax:4,reserveMax:20,fireRate:1.15,reloadTac:1.75,reloadDry:2.35,
     dmgHead:450,dmgBody:185,dmgLegs:120,pellets:1,pierce:true,spreadBase:0.002,spreadWalk:0.024,spreadAir:0.055,
-    adsFov:28,adsY:-0.072,recoilKick:2.3,recoilPitch:0.046,recoilYaw:0.002,casingType:3,tracerCol:0x00ffff,hasLaser:true
-    adsFov:26,adsY:-0.074,adsZ:-0.22,recoilKick:2.3,recoilPitch:0.046,recoilYaw:0.002,casingType:3,tracerCol:0x00ffff,hasLaser:true,adsSpeed:14
-    adsFov:26,adsY:-0.074,adsZ:-0.34,recoilKick:2.3,recoilPitch:0.046,recoilYaw:0.002,casingType:3,tracerCol:0x00ffff,hasLaser:true,adsSpeed:14
+    adsFov:26,adsY:-0.074,adsZ:-0.34,recoilKick:2.3,recoilPitch:0.046,recoilYaw:0.002,casingType:3,tracerCol:0x00ffff,hasLaser:true,adsSpeed:14,
+    hip:[0.02,-0.016,-0.01],carryRot:[0.06,0.16,0.08]
+  },
+  {
+    /* semi-automatic sidearm: one round per press; held closer than the long guns (hip offset) */
+    id:'pistol',name:'P-9 SIDEARM',sub:'9×19MM · SEMI-AUTO · 15 RD',
+    magMax:15,reserveMax:90,fireRate:0.13,reloadTac:1.05,reloadDry:1.45,semi:true,
+    dmgHead:72,dmgBody:27,dmgLegs:16,pellets:1,spreadBase:0.013,spreadWalk:0.009,spreadAir:0.020,
+    adsFov:60,adsY:-0.066,adsZ:-0.40,recoilKick:0.9,recoilPitch:0.020,recoilYaw:0.006,casingType:2,tracerCol:0xffe0a8,hasLaser:false,adsSpeed:24,
+    hip:[-0.03,0.02,0.10],carryRot:[0.035,0.10,0.035]
   }
 ];
 
@@ -48,7 +54,7 @@ var gunAmbient=new THREE.AmbientLight(0x2a3438,0.46);gunScene.add(gunAmbient);
 var gunKey=new THREE.DirectionalLight(0xe8f0f6,0.95);gunKey.position.set(-0.9,0.75,-0.35);gunScene.add(gunKey);
 var gunFill=new THREE.DirectionalLight(0xcdc6b8,0.42);gunFill.position.set(0.35,0.20,1.0);gunScene.add(gunFill);
 var gunUnder=new THREE.DirectionalLight(0x3e4a50,0.22);gunUnder.position.set(0.2,-1.0,0.3);gunScene.add(gunUnder);
-var gunRim=new THREE.DirectionalLight(0x60c4ff,0.75);gunRim.position.set(0.75,0.75,-0.9);gunScene.add(gunRim);
+var gunRim=new THREE.DirectionalLight(0xadd6e4,0.48);gunRim.position.set(0.75,0.75,-0.9);gunScene.add(gunRim);
 var GUN_KEY_BASE=0.95,GUN_FILL_BASE=0.42,gunLightLevel=1;
 function updateViewModelLight(dt){
   var f=pool[0],near=0;
@@ -212,7 +218,8 @@ function updateCasings(dt){
   }
 }
 
-/* 4 Ultra-Realistic 3D Weapon Models & Anatomical Hands */
+/* 5 first-person weapon view models & anatomical hands (three of them are stand-ins that
+   js/models.js replaces with GLB models once those load) */
 var wpnMeshes=[];
 var shotgunPump=null,shotgunLeftHand=null,rifleBolt=null,gunTrigger=null,gunTriggerFinger=null;
 
@@ -272,6 +279,22 @@ var opticLensAmberMat=new THREE.MeshStandardMaterial({
   opacity:0.34
 });
 opticLensAmberMat.envMapIntensity=1.5;opticLensAmberMat.userData.envSet=true;
+
+/* Reflex-sight glass (carbine holographic sight, shotgun and SMG red dots): nearly clear with a
+   faint coating tint, so the target stays sharp behind the reticle; a shade plane just inside the
+   rear glass darkens the rim of the window the way coated glass does. depthWrite stays off so the
+   reticle behind the glass is never lost to sorting. */
+var reflexGlassMat=new THREE.MeshStandardMaterial({color:0xbfe6ff,roughness:0.03,metalness:0.10,transparent:true,opacity:0.09,depthWrite:false});
+reflexGlassMat.envMapIntensity=1.1;reflexGlassMat.userData.envSet=true;
+var reflexGlassRedMat=new THREE.MeshStandardMaterial({color:0xff5a66,roughness:0.03,metalness:0.10,transparent:true,opacity:0.06,depthWrite:false});
+reflexGlassRedMat.envMapIntensity=1.1;reflexGlassRedMat.userData.envSet=true;
+var reflexGlassAmberMat=new THREE.MeshStandardMaterial({color:0xffc060,roughness:0.03,metalness:0.10,transparent:true,opacity:0.10,depthWrite:false});
+reflexGlassAmberMat.envMapIntensity=1.1;reflexGlassAmberMat.userData.envSet=true;
+var reflexLinerMat=new THREE.MeshStandardMaterial({color:0x0b0c0d,roughness:0.92,metalness:0.08,side:THREE.BackSide});   /* matte inside of the tube sights */
+reflexLinerMat.envMapIntensity=.05;reflexLinerMat.userData.envSet=true;
+var lensShadeMat=new THREE.MeshBasicMaterial({map:TX.lensShade,transparent:true,depthWrite:false});
+var lensShadeRoundMat=new THREE.MeshBasicMaterial({map:TX.lensShadeRound,transparent:true,depthWrite:false});
+function lensShade(parent,x,y,z,w,h,round){var m=new THREE.Mesh(new THREE.PlaneGeometry(w,h),round?lensShadeRoundMat:lensShadeMat);m.position.set(x,y,z);parent.add(m);return m;}
 
 /* Operator materials: ripstop sleeves and synthetic-leather gloves with millimetre-scale
    texture. Mid-dark base tones keep them readable on small primitives. */
@@ -397,18 +420,14 @@ function makeFinger(parent,pos,yaw,pitch,roll,lens,r,curls,noPlates){
     cur.add(seg);
     segs.push(seg);
     var ri=r*(1-i*0.10),last=i===n-1;
-    var shaft=new THREE.Mesh(cg(ri*0.94,ri,lens[i],8),last?palmPadMat:gloveMat);
     // Anatomical finger shaft with Kevlar weave
     var shaft=new THREE.Mesh(cg(ri*0.94,ri,lens[i],10),last?palmPadMat:gloveMat);
     shaft.userData.keep=true;
     shaft.rotation.x=-Math.PI/2;shaft.position.z=-lens[i]/2;seg.add(shaft);
-    var joint=new THREE.Mesh(sg(ri,8),gloveMat);
     // Articulated joint capsule
     var joint=new THREE.Mesh(sg(ri*1.02,10),gloveMat);
     joint.userData.keep=true;
     seg.add(joint);
-    if(last){var tip=new THREE.Mesh(sg(ri*0.92,8),palmPadMat);tip.userData.keep=true;tip.position.z=-lens[i];seg.add(tip);}
-    if(i<2&&!noPlates){var plate=gMesh(0,ri*0.70,-lens[i]/2,ri*1.5,ri*0.55,lens[i]*0.70,knuckleMat,seg);plate.userData.keep=true;}
     // High-friction silicone grip pad on inside contact surface
     var gripPad=gMesh(0,-ri*0.75,-lens[i]/2,ri*1.3,ri*0.42,lens[i]*0.80,palmGripMat,seg);
     gripPad.userData.keep=true;
@@ -439,12 +458,6 @@ var HAND_W=0.054,HAND_T=0.022,HAND_L=0.068;
 function makeHand(parent,side,pose){
   var h=new THREE.Group();h.userData.skipBatch=true;parent.add(h);
   var W=HAND_W,T=HAND_T,L=pose.L||HAND_L;
-  var palm=gMesh(0,0,0,W,T,L,gloveMat,h);palm.userData.keep=true;                                       // palm block
-  var knuckle=gMesh(0,T*0.5-0.002,-L*0.20,W*0.84,0.008,L*0.34,knuckleMat,h);knuckle.userData.keep=true;  // dorsal knuckle plate
-  var pad=gMesh(0,-T*0.5+0.002,L*0.10,W*0.66,0.006,L*0.46,palmPadMat,h);pad.userData.keep=true;          // palm pad
-  var strap=gMesh(0,T*0.5-0.003,L*0.32,W*0.40,0.006,L*0.18,knuckleMat,h);strap.userData.keep=true;       // wrist strap
-  var cuff=new THREE.Mesh(cg(0.019,0.0185,0.018,12),cuffMat);cuff.userData.keep=true;
-  cuff.rotation.x=Math.PI/2;cuff.position.set(0,0.001,L*0.5+0.005);cuff.scale.set(1.25,1,0.72);h.add(cuff);
   // Ergonomic palm core with breathable Kevlar fabric
   var palm=gMesh(0,0,0,W,T,L,gloveMat,h);palm.userData.keep=true;
   // Contoured thenar & hypothenar muscular pads
@@ -491,7 +504,6 @@ function makeHand(parent,side,pose){
   var tb=pose.thumbBase||[-0.028,0.002,0.24];
   var thumb=makeFinger(h,new THREE.Vector3(side*tb[0],tb[1],L*tb[2]),side*(pose.thumbYaw||0),
     pose.thumbPitch||0,side*(pose.thumbRoll||0),pose.thumbLens||[0.020,0.016,0.013],0.0068,pose.thumbCurls||[0.18,0.30,0.22],true);
-  var thenar=sMesh(side*-0.020,-0.002,L*tb[2],0.011,gloveMat,h,10);thenar.userData.keep=true;
   var thenar=sMesh(side*-0.020,-0.002,L*tb[2],0.012,gloveMat,h,10);thenar.userData.keep=true;
   h.userData.fingers=fingers;h.userData.thumb=thumb;
   h.userData.wrist=new THREE.Vector3(0,0.002,L*0.5+0.010);
@@ -526,10 +538,6 @@ function buildRealisticHands(parent,leftHandPos,rightHandPos,leftParent,gripTilt
   rArm.userData.wrist=rHand.userData.wrist.clone();
   rArm.userData.hand=rHand;
   rArm.userData.forearm=createAlignedForearm(rArm,new THREE.Vector3(0.06,-0.26,0.16),rArm.userData.wrist,0.035,0.021,sleeveMat,cuffMat);
-
-  // Wrist watch on the back of firing hand
-  var watchBase=gMesh(0,0.013,HAND_L*0.5+0.010,0.022,0.006,0.018,steelMat,rArm);watchBase.userData.keep=true;
-  var watchDial=gMesh(0,0.0165,HAND_L*0.5+0.010,0.018,0.002,0.013,cyanGlowMat,rArm);watchDial.userData.keep=true;
 
   // --- 2. SUPPORT HAND (Left Hand - customized per weapon) ---
   var lArm=new THREE.Group();lArm.userData.skipBatch=true;
@@ -689,51 +697,29 @@ function buildRealisticHands(parent,leftHandPos,rightHandPos,leftParent,gripTilt
   gMesh(0.020, 0.005, -0.16, 0.002, 0.012, 0.03, steelMat, gRifle);                                                     /* serial plate */
   cMesh(0, 0.004, 0.03, 0.005, 0.005, 0.01, steelMat, gRifle, 0, 0, 1.57, 8);                                           /* QD sling cup */
 
-  /* EOTech EXPS3 Holographic Sight with Dichroic Anti-Reflective Glass */
+  /* Tube red dot (the same MRO-style sight as the SMG): a hollow tube looked through at ADS, with
+     a flared front bell, a matte liner, nearly clear glass and a crisp 2 MOA dot */
   var opticZ = -0.20, opticY = 0.068;
-  gMesh(0, 0.048, opticZ, 0.030, 0.008, 0.078, darkMat, gRifle);
-  cMesh(0.017, 0.048, -0.21, 0.0045, 0.0045, 0.008, steelMat, gRifle, 0, 0, 1.57, 6);
-  gMesh(-0.017, opticY, opticZ, 0.0025, 0.034, 0.068, bodyMat, gRifle);
-  gMesh( 0.017, opticY, opticZ, 0.0025, 0.034, 0.068, bodyMat, gRifle);
-  gMesh(0, opticY+0.017, opticZ, 0.034, 0.0025, 0.068, bodyMat, gRifle);
-  gMesh(0, opticY-0.017, opticZ, 0.034, 0.0025, 0.068, bodyMat, gRifle);
-  gMesh(0, opticY, opticZ+0.030, 0.031, 0.030, 0.002, opticLensMat, gRifle);
-  gMesh(0, opticY, opticZ-0.030, 0.031, 0.030, 0.002, opticLensMat, gRifle);
-  cMesh(0.022, opticY-0.014, opticZ, 0.007, 0.007, 0.058, darkMat, gRifle, 1.57, 0, 0, 8);
-  cMesh(0.018, opticY, opticZ, 0.004, 0.004, 0.005, steelMat, gRifle, 0, 0, 1.57, 6);
-  // Sight riser mount with QD throw-lever clamp
-  gMesh(0, 0.048, opticZ, 0.030, 0.008, 0.082, darkMat, gRifle);
-  cMesh(0.018, 0.048, -0.21, 0.0045, 0.0045, 0.010, steelMat, gRifle, 0, 0, 1.57, 8);
-  gMesh(0.022, 0.048, -0.21, 0.003, 0.006, 0.022, steelMat, gRifle, 0, 0, 0.35);
-  // Outer beveled protective aluminum hood
-  gMesh(-0.018, opticY, opticZ, 0.0028, 0.036, 0.074, bodyMat, gRifle);
-  gMesh( 0.018, opticY, opticZ, 0.0028, 0.036, 0.074, bodyMat, gRifle);
-  gMesh(0, opticY+0.018, opticZ, 0.036, 0.0028, 0.074, bodyMat, gRifle);
-  gMesh(0, opticY-0.018, opticZ, 0.036, 0.0028, 0.074, bodyMat, gRifle);
-  // Chamfered top edges on hood
-  gMesh(-0.014, opticY+0.015, opticZ, 0.006, 0.006, 0.074, bodyMat, gRifle, 0, 0, 0.785);
-  gMesh( 0.014, opticY+0.015, opticZ, 0.006, 0.006, 0.074, bodyMat, gRifle, 0, 0, -0.785);
-  // Multi-coated optical glass elements
-  gMesh(0, opticY, opticZ+0.032, 0.032, 0.032, 0.002, opticLensMat, gRifle);
-  // Multi-coated dichroic anti-reflective glass lenses (front ruby tint, rear clear)
-  gMesh(0, opticY, opticZ+0.032, 0.032, 0.032, 0.002, opticLensRubyMat, gRifle);
-  gMesh(0, opticY, opticZ-0.032, 0.032, 0.032, 0.002, opticLensMat, gRifle);
-  // Transverse CR123A battery compartment & wire lanyard
-  cMesh(0.023, opticY-0.014, opticZ, 0.007, 0.007, 0.062, darkMat, gRifle, 1.57, 0, 0, 10);
-  cMesh(0.023, opticY-0.014, opticZ-0.032, 0.008, 0.008, 0.006, steelMat, gRifle, 1.57, 0, 0, 10);
-  // Elevation / windage brass adjustment dials
-  cMesh(0.023, opticY-0.014, opticZ+0.032, 0.004, 0.004, 0.008, darkMat, gRifle, 1.57, 0, 0, 8); // tether lug
-  // Left-side tactile rubber brightness buttons (NV, Up, Down)
-  gMesh(-0.020, opticY-0.010, opticZ-0.012, 0.002, 0.006, 0.006, rubberMat, gRifle);
-  gMesh(-0.020, opticY-0.010, opticZ+0.000, 0.002, 0.006, 0.006, rubberMat, gRifle);
-  gMesh(-0.020, opticY-0.010, opticZ+0.012, 0.002, 0.006, 0.006, rubberMat, gRifle);
-  // Elevation / windage brass adjustment screw dials
-  cMesh(0.019, opticY, opticZ, 0.004, 0.004, 0.004, brassMat, gRifle, 0, 0, 1.57, 8);
-  cMesh(0, opticY+0.019, opticZ, 0.004, 0.004, 0.004, brassMat, gRifle, 0, 1.57, 0, 8);
-  // 3D Holographic Reticle Plane (illuminated 68-MOA ring + 1-MOA dot)
-  var holo = new THREE.Mesh(new THREE.PlaneGeometry(0.036, 0.036), holoMat);
-  holo.position.set(0, opticY, opticZ - 0.005);
-  holo.position.set(0, opticY, opticZ - 0.006);
+  // The sight lives in its own group so it can be re-seated on a different rifle model
+  var optic=new THREE.Group();optic.position.set(0,opticY,opticZ);gRifle.add(optic);gRifle.userData.optic=optic;
+  // Riser mount with QD throw-lever clamp and a saddle under the tube
+  gMesh(0, 0.048-opticY, 0, 0.030, 0.008, 0.070, darkMat, optic);
+  cMesh(0.018, 0.048-opticY, -0.01, 0.0045, 0.0045, 0.010, steelMat, optic, 0, 0, 1.57, 8);
+  gMesh(0.022, 0.048-opticY, -0.01, 0.003, 0.006, 0.022, steelMat, optic, 0, 0, 0.35);
+  gMesh(0, 0.057-opticY, 0, 0.020, 0.010, 0.040, darkMat, optic);
+  var rdTube=new THREE.Mesh(new THREE.CylinderGeometry(0.015,0.015,0.054,14,1,true),bodyMat);rdTube.rotation.x=1.57;optic.add(rdTube);
+  var rdBell=new THREE.Mesh(new THREE.CylinderGeometry(0.0175,0.015,0.014,14,1,true),bodyMat);rdBell.rotation.x=1.57;rdBell.position.z=-0.028;optic.add(rdBell);
+  var rdLiner=new THREE.Mesh(new THREE.CylinderGeometry(0.0142,0.0142,0.066,14,1,true),reflexLinerMat);rdLiner.rotation.x=1.57;rdLiner.position.z=-0.004;optic.add(rdLiner);
+  // Brightness dial on top, windage turret on the side
+  cMesh(0, 0.016, 0, 0.007, 0.007, 0.008, darkMat, optic, 0, 0, 0, 12);
+  cMesh(0.016, 0, 0, 0.005, 0.005, 0.006, steelMat, optic, 0, 0, 1.57, 10);
+  // Glass: red notch-coated objective, clear ocular, shaded rim
+  cMesh(0, 0, -0.026, 0.0145, 0.0145, 0.002, reflexGlassRedMat, optic, 1.57, 0, 0, 14);
+  cMesh(0, 0, 0.024, 0.0135, 0.0135, 0.002, reflexGlassMat, optic, 1.57, 0, 0, 14);
+  lensShade(optic, 0, 0, 0.020, 0.029, 0.029, true);
+  // 2 MOA red dot
+  var holo = new THREE.Mesh(new THREE.PlaneGeometry(0.018, 0.018), reflexDotMat);
+  holo.position.set(0, opticY, opticZ - 0.004);
   gRifle.add(holo);
   gRifle.userData.holo = holo;
   gRifle.userData.opticReticle = holo;
@@ -746,15 +732,17 @@ function buildRealisticHands(parent,leftHandPos,rightHandPos,leftParent,gripTilt
   wpnMeshes.push(gRifle);
 })();
 
-/* 2. BUILD SHOTGUN (BREACHER-12 TACTICAL 12-GAUGE) */
+/* 2. BUILD SHOTGUN (S1897 PUMP 12-GAUGE) */
 (function buildShotgun(){
   var gShot=new THREE.Group();
   // Heavy milled steel receiver
   gMesh(0,0.01,-0.16,0.038,0.052,0.26,bodyMat,gShot);
   gMesh(0,0.038,-0.16,0.024,0.006,0.22,darkMat,gShot);
-  // Ghost ring rear combat sight
-  cMesh(0,0.046,-0.08,0.007,0.007,0.003,steelMat,gShot,1.57,0,0,8);
-  cMesh(0,0.046,-0.08,0.004,0.004,0.004,darkMat,gShot,1.57,0,0,8);
+  // Ghost ring rear sight: an actual ring on a short base, level with the front blade, so the
+  // shotgun is aimed through it and over the bead (no optic on this gun)
+  gMesh(0,0.049,-0.08,0.012,0.016,0.008,darkMat,gShot);
+  var ghostRing=new THREE.Mesh(new THREE.RingGeometry(0.0080,0.0102,16),darkMat);ghostRing.position.set(0,0.066,-0.0785);gShot.add(ghostRing);
+  var ghostRim=new THREE.Mesh(new THREE.CylinderGeometry(0.0102,0.0102,0.003,16,1,true),darkMat);ghostRim.rotation.x=1.57;ghostRim.position.set(0,0.066,-0.08);gShot.add(ghostRim);
   // Receiver top Picatinny optic rail
   for(var si=0;si<6;si++) gMesh(0, 0.041, -0.09 - si*0.022, 0.024, 0.003, 0.010, steelMat, gShot);
 
@@ -762,9 +750,6 @@ function buildRealisticHands(parent,leftHandPos,rightHandPos,leftParent,gripTilt
   cMesh(0,0.024,-0.48,0.012,0.012,0.48,steelMat,gShot,1.57,0,0,12);
   cMesh(0,0.002,-0.44,0.010,0.010,0.40,darkMat,gShot,1.57,0,0,10);
   cMesh(0,0.002,-0.645,0.011,0.011,0.015,steelMat,gShot,1.57,0,0,10); // Knurled magazine endcap
-  // Door-breaching aggressive jagged muzzle brake
-  cMesh(0,0.024,-0.73,0.0145,0.014,0.045,steelMat,gShot,1.57,0,0,10);
-  gMesh(0,0.039,-0.71,0.004,0.006,0.015,greenGlowMat,gShot); // High-viz fiber optic front bead
   // Barrel clamp bracket with QD sling swivel mount
   gMesh(0, 0.013, -0.62, 0.028, 0.032, 0.014, steelMat, gShot);
   cMesh(0.016, 0.013, -0.62, 0.0035, 0.0035, 0.006, steelMat, gShot, 0, 0, 1.57, 8);
@@ -778,30 +763,13 @@ function buildRealisticHands(parent,leftHandPos,rightHandPos,leftParent,gripTilt
   for(var bi=0;bi<6;bi++) cMesh(0, 0.024, -0.73, 0.0175, 0.0175, 0.006, darkMat, gShot, 1.57, 0, bi*1.047, 8);
 
   // Co-witnessed front combat sight with luminous green tritium vial
-  var frontY = 0.052;
-  gMesh(0, 0.044, -0.725, 0.010, 0.014, 0.018, steelMat, gShot);
+  // (raised to the ghost ring's height: the bead sits just above the ring's centre at ADS)
+  var frontY = 0.068;
+  gMesh(0, 0.052, -0.725, 0.010, 0.030, 0.018, steelMat, gShot);
   cMesh(0, frontY, -0.725, 0.0025, 0.0025, 0.010, greenGlowMat, gShot, 1.57, 0, 0, 8);
   gMesh(-0.006, frontY, -0.725, 0.002, 0.012, 0.012, steelMat, gShot);
   gMesh( 0.006, frontY, -0.725, 0.002, 0.012, 0.012, steelMat, gShot);
-
-  // Tactical Open Reflex Sight (Holosun 507C / RMR Combat Optic)
-  var opticY = 0.052, opticZ = -0.16;
-  gMesh(0, 0.044, opticZ, 0.026, 0.006, 0.054, darkMat, gShot);
-  // Protective aluminum side ears
-  // Protective aluminum hood ears with chamfered top
-  gMesh(-0.014, opticY, opticZ, 0.0025, 0.022, 0.048, bodyMat, gShot);
-  gMesh( 0.014, opticY, opticZ, 0.0025, 0.022, 0.048, bodyMat, gShot);
-  gMesh(0, opticY+0.011, opticZ, 0.026, 0.0025, 0.048, bodyMat, gShot);
-  // Amber-coated optical glass
-  gMesh(0, opticY, opticZ-0.016, 0.025, 0.021, 0.002, opticLensAmberMat, gShot);
-  gMesh(0, opticY, opticZ+0.016, 0.025, 0.021, 0.002, opticLensAmberMat, gShot);
-  // Luminous 32-MOA Shotgun Pellet Spread Reticle
-  var shotgunReticle = new THREE.Mesh(new THREE.PlaneGeometry(0.025, 0.025), shotgunReticleMat);
-  shotgunReticle.position.set(0, opticY, opticZ - 0.003);
-  gShot.add(shotgunReticle);
-  gShot.userData.opticReticle = shotgunReticle;
-  gShot.userData.opticY = opticY;
-  gShot.userData.opticZ = opticZ;
+  // No optic on the shotgun: it is aimed through the ghost ring over the tritium bead.
 
   // Tactical Ribbed Forend Pump with Handstop
   var pump=new THREE.Group();pump.position.set(0,0.002,-0.38);gShot.add(pump);
@@ -813,15 +781,6 @@ function buildRealisticHands(parent,leftHandPos,rightHandPos,leftParent,gripTilt
   gMesh(-0.019, 0.014, 0.04, 0.003, 0.006, 0.14, steelMat, pump);
   shotgunPump=pump;gShot.userData.pump=pump;
 
-  // Receiver-Mounted Side-Saddle Shell Carrier with 4 Red 12-Gauge Shells
-  gMesh(-0.023,0.01,-0.16,0.006,0.036,0.18,darkMat,gShot);
-  for(var si=0;si<4;si++){
-    var sz=-0.22+si*0.042;
-    cMesh(-0.026,0.01,sz,0.009,0.009,0.055,shellRedMat,gShot,1.57,0,0,8);
-  // Receiver-Mounted Side-Saddle Shell Carrier with 5 Red 12-Gauge Shells
-  gMesh(-0.023,0.01,-0.16,0.006,0.036,0.20,darkMat,gShot);
-  for(var ssi=0;ssi<5;ssi++){
-    var sz=-0.23+ssi*0.038;
   // Receiver-Mounted Side-Saddle Shell Carrier with 6 Red 12-Gauge Magnum Shells
   gMesh(-0.023,0.01,-0.16,0.006,0.038,0.22,darkMat,gShot);
   for(var ssi=0;ssi<6;ssi++){
@@ -850,21 +809,14 @@ function buildRealisticHands(parent,leftHandPos,rightHandPos,leftParent,gripTilt
   var gSmg=new THREE.Group();
   // Super-V Angled Recoil Mitigation Receiver Housing
   gMesh(0,0.02,-0.16,0.032,0.045,0.22,bodyMat,gSmg);
-  gMesh(0,-0.035,-0.19,0.030,0.075,0.10,darkMat,gSmg,0.40,0,0);
   gMesh(0,-0.035,-0.19,0.030,0.075,0.10,darkMat,gSmg,0.40,0,0); // downward angled inertia block housing
   // Super-V mechanical slider inspection window & silver inertia bolt
   gMesh(0.017, -0.035, -0.19, 0.002, 0.050, 0.065, steelMat, gSmg, 0.40, 0, 0);
   gMesh(-0.017, -0.035, -0.19, 0.002, 0.050, 0.065, steelMat, gSmg, 0.40, 0, 0);
   // Full-length top Picatinny rail
   gMesh(0,0.045,-0.18,0.022,0.006,0.24,darkMat,gSmg);
-  for(var ti=0;ti<8;ti++)gMesh(0,0.048,-0.08-ti*0.022,0.024,0.003,0.010,darkMat,gSmg);
   for(var ti=0;ti<10;ti++)gMesh(0,0.048,-0.08-ti*0.022,0.024,0.003,0.010,darkMat,gSmg);
 
-  // Match Barrel & Aggressive Compensator
-  cMesh(0,0.02,-0.34,0.007,0.007,0.18,steelMat,gSmg,1.57,0,0,8);
-  cMesh(0,0.02,-0.44,0.013,0.013,0.045,steelMat,gSmg,1.57,0,0,8);
-  // Extended 33-round 9mm stick magazine
-  // Bolt track & ejection port with visible steel bolt face
   // Ejection port with extractor claw & silver bolt carrier
   gMesh(0.017, 0.022, -0.18, 0.004, 0.018, 0.055, steelMat, gSmg);
   gMesh(0.018, 0.022, -0.16, 0.003, 0.005, 0.014, darkMat, gSmg); // extractor
@@ -874,36 +826,31 @@ function buildRealisticHands(parent,leftHandPos,rightHandPos,leftParent,gripTilt
   cMesh(0,0.02,-0.44,0.0135,0.0135,0.045,steelMat,gSmg,1.57,0,0,10);
   for(var cpi=0;cpi<3;cpi++) gMesh(0, 0.030, -0.43 - cpi*0.010, 0.012, 0.004, 0.004, darkMat, gSmg);
 
-  // Extended 33-round 9mm stick magazine with witness holes
   // Extended 36-round 9mm stick magazine with brass witness holes
   var mag=new THREE.Group();mag.position.set(0,-0.08,-0.20);mag.rotation.x=-0.22;gSmg.add(mag);
   gMesh(0,-0.08,0,0.018,0.18,0.038,magMat,mag);
   gMesh(0,-0.175,0.002,0.022,0.012,0.044,darkMat,mag);
-  for(var wi=0;wi<4;wi++) cMesh(0.010, -0.04 - wi*0.03, 0.008, 0.002, 0.002, 0.002, brassMat, mag, 0, 0, 1.57, 6);
   for(var wi=0;wi<5;wi++) cMesh(0.010, -0.035 - wi*0.028, 0.008, 0.0022, 0.0022, 0.002, brassMat, mag, 0, 0, 1.57, 6);
   mag.userData.initialY=-0.08;gSmg.userData.mag=mag;
 
-  // Reflex Sight with Ruby Coated Lens
   // Precision Trijicon MRO Style Wide-Aperture Reflex Sight
   var opticZ=-0.17,opticY=0.065;
-  gMesh(0,opticY,opticZ,0.026,0.030,0.002,opticLensMat,gSmg);
-  gMesh(-0.014,opticY,opticZ,0.002,0.032,0.045,darkMat,gSmg);
-  gMesh( 0.014,opticY,opticZ,0.002,0.032,0.045,darkMat,gSmg);
-  gMesh(0,opticY+0.015,opticZ,0.028,0.002,0.045,darkMat,gSmg);
-  var dot=new THREE.Mesh(new THREE.PlaneGeometry(0.015,0.015),holoMat);
-  dot.position.set(0,opticY,opticZ-0.002);gSmg.add(dot);
-  gMesh(0, 0.048, opticZ, 0.024, 0.008, 0.048, darkMat, gSmg); // Picatinny riser mount
-  cMesh(0.014, 0.048, opticZ, 0.004, 0.004, 0.008, steelMat, gSmg, 0, 0, 1.57, 6); // clamp bolt
-  // Cylindrical sight body with flared front objective bell
-  cMesh(0, opticY, opticZ, 0.015, 0.015, 0.054, bodyMat, gSmg, 1.57, 0, 0, 14);
-  cMesh(0, opticY, opticZ - 0.028, 0.0175, 0.015, 0.014, bodyMat, gSmg, 1.57, 0, 0, 14);
-  // Top brightness turret
+  // The sight lives in its own group so it can be re-seated on a different weapon model
+  var optic=new THREE.Group();optic.position.set(0,opticY,opticZ);gSmg.add(optic);gSmg.userData.optic=optic;
+  gMesh(0, 0.048-opticY, 0, 0.024, 0.008, 0.048, darkMat, optic); // Picatinny riser mount
+  cMesh(0.014, 0.048-opticY, 0, 0.004, 0.004, 0.008, steelMat, optic, 0, 0, 1.57, 6); // clamp bolt
+  // Cylindrical sight body with flared front objective bell: open-ended tubes with a matte
+  // inner liner, so the sight is looked through at ADS instead of showing its end cap
+  var mroTube=new THREE.Mesh(new THREE.CylinderGeometry(0.015,0.015,0.054,14,1,true),bodyMat);mroTube.rotation.x=1.57;optic.add(mroTube);
+  var mroBell=new THREE.Mesh(new THREE.CylinderGeometry(0.0175,0.015,0.014,14,1,true),bodyMat);mroBell.rotation.x=1.57;mroBell.position.z=-0.028;optic.add(mroBell);
+  var mroLiner=new THREE.Mesh(new THREE.CylinderGeometry(0.0142,0.0142,0.066,14,1,true),reflexLinerMat);mroLiner.rotation.x=1.57;mroLiner.position.z=-0.004;optic.add(mroLiner);
   // Top rotary brightness dial turret & side coin-slot windage turret
-  cMesh(0, opticY + 0.016, opticZ, 0.007, 0.007, 0.008, darkMat, gSmg, 0, 0, 0, 12);
-  cMesh(0.016, opticY, opticZ, 0.005, 0.005, 0.006, steelMat, gSmg, 0, 0, 1.57, 10);
-  // Multi-coated optical glass: Ruby front lens & clear rear lens
-  cMesh(0, opticY, opticZ - 0.026, 0.0145, 0.0145, 0.002, opticLensRubyMat, gSmg, 1.57, 0, 0, 14);
-  cMesh(0, opticY, opticZ + 0.024, 0.0135, 0.0135, 0.002, opticLensMat, gSmg, 1.57, 0, 0, 14);
+  cMesh(0, 0.016, 0, 0.007, 0.007, 0.008, darkMat, optic, 0, 0, 0, 12);
+  cMesh(0.016, 0, 0, 0.005, 0.005, 0.006, steelMat, optic, 0, 0, 1.57, 10);
+  // Multi-coated optical glass: red notch-coated front lens & clear rear lens, shaded rim
+  cMesh(0, 0, -0.026, 0.0145, 0.0145, 0.002, reflexGlassRedMat, optic, 1.57, 0, 0, 14);
+  cMesh(0, 0, 0.024, 0.0135, 0.0135, 0.002, reflexGlassMat, optic, 1.57, 0, 0, 14);
+  lensShade(optic, 0, 0, 0.020, 0.029, 0.029, true);
   // Illuminated 2-MOA Sharp CQB Red Dot Reticle
   var dot=new THREE.Mesh(new THREE.PlaneGeometry(0.018,0.018),reflexDotMat);
   dot.position.set(0,opticY,opticZ-0.004);gSmg.add(dot);
@@ -928,14 +875,10 @@ function buildRealisticHands(parent,leftHandPos,rightHandPos,leftParent,gripTilt
 (function buildRailgun(){
   var gRail=new THREE.Group();
   // Reinforced painted heavy receiver chassis
-  gMesh(0,0.015,-0.16,0.044,0.072,0.28,railPaintMat,gRail);
   gMesh(0,0.015,-0.16,0.046,0.074,0.28,railPaintMat,gRail);
   cMesh(0.032,0.035,-0.11,0.005,0.005,0.045,steelMat,gRail,0,0,0.8);
-  for(var bi2=0;bi2<4;bi2++)cMesh(0.0225,0.04-bi2*0.02,-0.06,0.0035,0.0035,0.003,steelMat,gRail,0,0,1.57,6);   /* chassis bolts */
-  gMesh(0.0225,-0.01,-0.2,0.002,0.03,0.06,steelMat,gRail);                                                       /* data plate */
   for(var bi2=0;bi2<4;bi2++)cMesh(0.0235,0.04-bi2*0.02,-0.06,0.0035,0.0035,0.003,steelMat,gRail,0,0,1.57,6);   /* chassis bolts */
   gMesh(0.0235,-0.01,-0.2,0.002,0.03,0.06,steelMat,gRail);                                                       /* data plate */
-  // Power capacitor bank battery cell
   // Hazard caution yellow accent strip on chassis
   gMesh(0.0235, 0.022, -0.16, 0.002, 0.008, 0.16, brassMat, gRail);
 
@@ -948,9 +891,6 @@ function buildRealisticHands(parent,leftHandPos,rightHandPos,leftParent,gripTilt
   }
   batt.userData.initialY=-0.065;gRail.userData.mag=batt;
 
-  // Twin Electromagnetic Acceleration Rails & Cooling Fin Array
-  gMesh(0,0.034,-0.52,0.028,0.016,0.48,steelMat,gRail);
-  gMesh(0,-0.006,-0.52,0.028,0.016,0.48,steelMat,gRail);
   // High-voltage insulated heavy power conduits linking capacitor to rail accelerators
   cMesh( 0.022, -0.02, -0.28, 0.005, 0.005, 0.16, darkMat, gRail, 0.35, 0, 0, 8);
   cMesh(-0.022, -0.02, -0.28, 0.005, 0.005, 0.16, darkMat, gRail, 0.35, 0, 0, 8);
@@ -965,30 +905,17 @@ function buildRealisticHands(parent,leftHandPos,rightHandPos,leftParent,gripTilt
   cMesh(0,0.014,-0.52,0.008,0.008,0.46,cyanGlowMat,gRail,1.57,0,0,8);
   // Transverse thermal radiator fins with energy vents
   for(var fi=0;fi<8;fi++)gMesh(0,0.038,-0.34-fi*0.045,0.032,0.004,0.015,darkMat,gRail);
-  cMesh(0,0.014,-0.52,0.008,0.008,0.46,cyanGlowMat,gRail,1.57,0,0,8);
-  for(var ri=0;ri<4;ri++){
-    var rz=-0.34-ri*0.09;
-    cMesh(0,0.014,rz,0.024,0.024,0.018,darkMat,gRail,1.57,0,0,8);
-    cMesh(0,0.014,rz,0.025,0.025,0.008,cyanGlowMat,gRail,1.57,0,0,8);
   for(var ri=0;ri<5;ri++){
     var rz=-0.32-ri*0.085;
     cMesh(0,0.014,rz,0.026,0.026,0.014,darkMat,gRail,1.57,0,0,8);
     cMesh(0,0.014,rz,0.027,0.027,0.006,cyanGlowMat,gRail,1.57,0,0,8);
   }
-  gMesh(0,0.014,-0.76,0.036,0.044,0.048,steelMat,gRail);
   // Heavy muzzle stabilizer & ion shunt
   gMesh(0,0.014,-0.76,0.038,0.046,0.048,steelMat,gRail);
   cMesh(0,0.014,-0.785,0.012,0.012,0.010,cyanGlowMat,gRail,1.57,0,0,8);
 
-  // Heavy Sniper Scope with Multi-Coated Objective
   // Heavy 34mm Sniper Scope Assembly with Knurled Turrets & Sunshade
   var scopeZ=-0.18,scopeY=0.074;
-  gMesh(0,0.055,-0.12,0.026,0.018,0.016,darkMat,gRail);
-  gMesh(0,0.055,-0.24,0.026,0.018,0.016,darkMat,gRail);
-  cMesh(0,scopeY,scopeZ,0.014,0.014,0.22,steelMat,gRail,1.57,0,0,12);
-  cMesh(0,scopeY,-0.30,0.020,0.014,0.060,darkMat,gRail,1.57,0,0,12);
-  cMesh(0,scopeY,-0.06,0.014,0.018,0.045,darkMat,gRail,1.57,0,0,12);
-  cMesh(0,scopeY,-0.04,0.016,0.016,0.002,opticLensMat,gRail,1.57,0,0,12);
   // Dual heavy mounting rings with torx bolts
   gMesh(0,0.052,-0.11,0.028,0.020,0.018,darkMat,gRail);
   gMesh(0,0.052,-0.25,0.028,0.020,0.018,darkMat,gRail);
@@ -1021,6 +948,31 @@ function buildRealisticHands(parent,leftHandPos,rightHandPos,leftParent,gripTilt
   gRail.visible=false;gunRig.add(gRail);wpnMeshes.push(gRail);
 })();
 
+/* 5. BUILD PISTOL (P-9 SIDEARM): the stand-in for models/pistol.glb, built to the same
+   dimensions so the hand spec fits either. Compact 9 mm: slide, frame, raked grip, guard,
+   trigger, iron sights and a magazine the reload can drop. */
+(function buildPistol(){
+  var gPis=new THREE.Group();
+  /* the parts were laid out for a compact; the body group scales them to the full-size frame
+     the hand spec and the GLB use (the hands are children of gPis, so they stay real size) */
+  var body=new THREE.Group();body.scale.setScalar(1.124);body.position.y=-0.0082;gPis.add(body);
+  gMesh(0,0.052,-0.058,0.027,0.028,0.190,steelMat,body);                 /* slide */
+  gMesh(0,0.061,-0.100,0.022,0.006,0.060,darkMat,body);                  /* slide top flat */
+  gMesh(0,0.020,-0.046,0.027,0.036,0.128,bodyMat,body);                  /* frame and dust cover */
+  var grip=gMesh(0,-0.035,0.000,0.027,0.052,0.044,darkMat,body);grip.rotation.x=-0.15;
+  gMesh(0,0.018,0.024,0.024,0.016,0.016,bodyMat,body);                   /* rear tang */
+  gMesh(0,-0.001,-0.045,0.008,0.003,0.040,bodyMat,body);                 /* trigger guard, bottom bar */
+  gMesh(0,0.008,-0.066,0.008,0.020,0.003,bodyMat,body);                  /* trigger guard, front */
+  var trig=gMesh(0,0.010,-0.045,0.004,0.016,0.005,steelMat,body);trig.userData.keep=true;trig.userData.homeZ=trig.position.z;gPis.userData.triggerMesh=trig;
+  cMesh(0,0.048,-0.150,0.0065,0.0065,0.014,steelMat,body,1.57,0,0,10);   /* barrel crown */
+  gMesh(0,0.066,-0.145,0.003,0.006,0.004,darkMat,body);                  /* front sight */
+  gMesh(-0.006,0.066,0.028,0.003,0.006,0.005,darkMat,body);gMesh(0.006,0.066,0.028,0.003,0.006,0.005,darkMat,body);   /* rear notch */
+  var mag=new THREE.Group();mag.position.set(0,-0.045,0.000);body.add(mag);
+  var magBody=gMesh(0,0,0,0.021,0.066,0.030,magMat,mag);magBody.userData.keep=true;
+  var plate=gMesh(0,-0.036,0.002,0.025,0.006,0.036,darkMat,mag);plate.userData.keep=true;
+  mag.userData.homePosition=mag.position.clone();mag.userData.homeRotation=mag.rotation.clone();mag.userData.initialY=mag.position.y;gPis.userData.mag=mag;
+  gPis.visible=false;gunRig.add(gPis);wpnMeshes.push(gPis);
+})();
 
 var gun=wpnMeshes[0];
 
@@ -1031,7 +983,7 @@ var gun=wpnMeshes[0];
    be re-derived per pose. The view model is drawn in gunScene through gunCam, so the socket is
    carried into the main scene through the screen: the pixel the muzzle occupies is unprojected
    through the world camera at a plausible eye distance. Smoke spawned there stays in the world. */
-var MUZZLE_SOCKET_LOCAL=[new THREE.Vector3(0,.024,-.70),new THREE.Vector3(0,.024,-.755),new THREE.Vector3(0,.020,-.465),new THREE.Vector3(0,.014,-.787)];
+var MUZZLE_SOCKET_LOCAL=[new THREE.Vector3(0,.024,-.70),new THREE.Vector3(0,.024,-.755),new THREE.Vector3(0,.020,-.465),new THREE.Vector3(0,.014,-.787),new THREE.Vector3(0,.046,-.172)];
 for(var msi=0;msi<wpnMeshes.length;msi++){
   var msock=new THREE.Object3D();msock.name='muzzle';
   msock.position.copy(MUZZLE_SOCKET_LOCAL[msi]);
@@ -1088,7 +1040,9 @@ function shotMuzzle(){
 }
 /* Muzzle flash: a petal-shaped flash (two variants swapped per shot) inside a soft halo. It
    shrinks when aiming so it never sits over the target. */
-var flash=new THREE.Sprite(new THREE.SpriteMaterial({map:TX.flash,color:0xffcf88,transparent:true,
+/* the flash is the brightest thing that ever happens in the station; in a linear float buffer it
+   can finally say so, and it is what the bloom threshold at 1.02 is there to catch */
+var flash=new THREE.Sprite(new THREE.SpriteMaterial({map:TX.flash,color:new THREE.Color(0xffcf88).multiplyScalar(5.0),transparent:true,
   blending:THREE.AdditiveBlending,depthWrite:false,opacity:0}));
 flash.position.set(0,0.024,-0.70);flash.scale.set(0.12,0.12,1);gunRig.add(flash);
 var flashHalo=new THREE.Sprite(new THREE.SpriteMaterial({map:TX.glow,color:0xffb060,transparent:true,
@@ -1210,9 +1164,10 @@ var MZ_SMOKE_CFG=[
   {n:5, spd:2.3,cone:.16,s0:.05, s1:.30,life:1.10,a:.26,tint:[1.0,.62,.30],tintT:.12,heat:.060,cool:.30,wisp:.14,base:[.50,.52,.54]},   /* carbine */
   {n:11,spd:1.9,cone:.26,s0:.09, s1:.58,life:1.90,a:.36,tint:[1.0,.55,.25],tintT:.14,heat:.200,cool:.20,wisp:.18,base:[.48,.50,.51]},   /* shotgun: big rolling cloud */
   {n:3, spd:2.5,cone:.14,s0:.035,s1:.20,life:.85, a:.20,tint:[1.0,.70,.35],tintT:.10,heat:.035,cool:.32,wisp:.12,base:[.50,.52,.54]},   /* smg: light, but it stacks */
-  {n:7, spd:4.4,cone:.07,s0:.04, s1:.34,life:1.20,a:.30,tint:[.45,.92,1.0],tintT:.36,heat:.320,cool:.18,wisp:.16,base:[.60,.66,.70]}    /* railgun: ionised vapour */
+  {n:7, spd:4.4,cone:.07,s0:.04, s1:.34,life:1.20,a:.30,tint:[.45,.92,1.0],tintT:.36,heat:.320,cool:.18,wisp:.16,base:[.60,.66,.70]},   /* railgun: ionised vapour */
+  {n:3, spd:2.4,cone:.15,s0:.035,s1:.22,life:.90, a:.22,tint:[1.0,.68,.34],tintT:.10,heat:.050,cool:.30,wisp:.12,base:[.50,.52,.54]}    /* pistol: a short puff */
 ];
-var mzHeat=[0,0,0,0];                 /* sustained-fire barrel heat per weapon, 0..1 */
+var mzHeat=WEAPONS.map(function(){return 0;});   /* sustained-fire barrel heat per weapon, 0..1 */
 var mzWispAcc=0;
 var _mzRight=new THREE.Vector3(),_mzUp=new THREE.Vector3(),_mzTmp=new THREE.Vector3(),_mzLastP=new THREE.Vector3(0,-999,0),_mzVel=new THREE.Vector3();
 /* one particle from the pool at (x,y,z) with velocity v, sizes s0->s1, life, alpha, atlas cell */
@@ -1259,7 +1214,7 @@ function spawnMuzzleSmoke(cur,origin){
 }
 function resetMuzzleSmoke(){
   for(var i=0;i<MZ_SMOKE_MAX;i++){var p=mzSmoke[i];p.life=0;p.y=-500;}
-  for(var w=0;w<4;w++)mzHeat[w]=0;
+  for(var w=0;w<WEAPONS.length;w++)mzHeat[w]=0;
   mzWispAcc=0;mzSmokeActive=0;mzSmokeMesh.visible=false;_mzLastP.set(0,-999,0);
 }
 function updateMuzzleSmoke(dt){
@@ -1270,7 +1225,7 @@ function updateMuzzleSmoke(dt){
   else _mzVel.set((P.x-_mzLastP.x)/dt,(P.y-_mzLastP.y)/dt,(P.z-_mzLastP.z)/dt);
   _mzLastP.set(P.x,P.y,P.z);
   /* barrels cool; a hot one breathes thin wisps between shots */
-  for(var w=0;w<4;w++)mzHeat[w]=Math.max(0,mzHeat[w]-MZ_SMOKE_CFG[w].cool*dt);
+  for(var w=0;w<WEAPONS.length;w++)mzHeat[w]=Math.max(0,mzHeat[w]-MZ_SMOKE_CFG[w].cool*dt);
   var cur=P.curWpn,cfg=MZ_SMOKE_CFG[cur]||MZ_SMOKE_CFG[0],heat=mzHeat[cur];
   if(heat>.25&&G.state==='play'&&P.switchT<=0){
     mzWispAcc+=heat*heat*11*(typeof fxScale==='number'?fxScale:1)*dt;
@@ -1360,26 +1315,67 @@ function updatePuffs(dt){
 }
 /* Explosions: a fast fireball sprite, a shockwave ring on the floor, rising smoke and a brief,
    sane point light. The rail impact reuses the pool with a cyan, camera-facing ring. */
-var BLAST_MAX=6,blastPool=[],blastHead=0;
+var BLAST_MAX=6,BLAST_LOBES=4,blastPool=[],blastHead=0;
 var ringFlatGeo=new THREE.PlaneGeometry(1,1);ringFlatGeo.rotateX(-Math.PI/2);
+/* Embers: burning fragments thrown out of the charge, warm and heavy, which is most of what sells
+   the scale of a blast once the flash is gone. */
+function blastEmbers(x,y,z,scale){
+  if(typeof parts==='undefined'||typeof pHead==='undefined')return;
+  var n=Math.max(4,Math.round(30*scale*(typeof fxScale==='number'?fxScale:1)));
+  for(var i=0;i<n;i++){
+    var p=parts[pHead];pHead=(pHead+1)%PMAX;
+    var a=Math.random()*TAU,e=Math.random()*1.3-0.15,sp=3+Math.random()*10;
+    p.life=0.35+Math.random()*0.95;
+    p.x=x+(Math.random()-0.5)*0.3;p.y=y+(Math.random()-0.5)*0.3;p.z=z+(Math.random()-0.5)*0.3;
+    p.vx=Math.cos(a)*Math.cos(e)*sp;p.vy=Math.sin(e)*sp+2.2;p.vz=Math.sin(a)*Math.cos(e)*sp;
+    p.r=1.0;p.g=0.42+Math.random()*0.38;p.b=0.10+Math.random()*0.10;
+  }
+}
 for(var bfi=0;bfi<BLAST_MAX;bfi++){
-  var fire=new THREE.Sprite(new THREE.SpriteMaterial({map:TX.flash,color:0xffc070,transparent:true,blending:THREE.AdditiveBlending,depthWrite:false,opacity:0}));
+  var fire=new THREE.Sprite(new THREE.SpriteMaterial({map:TX.flash,color:new THREE.Color(0xffc070).multiplyScalar(4.2),transparent:true,blending:THREE.AdditiveBlending,depthWrite:false,opacity:0}));
   var ringFlat=new THREE.Mesh(ringFlatGeo,new THREE.MeshBasicMaterial({map:TX.ring,color:0xffb070,transparent:true,blending:THREE.AdditiveBlending,depthWrite:false,side:THREE.DoubleSide,opacity:0}));
   var ringSprite=new THREE.Sprite(new THREE.SpriteMaterial({map:TX.ring,color:0x7af4ff,transparent:true,blending:THREE.AdditiveBlending,depthWrite:false,opacity:0}));
+  /* the pressure wave: a camera-facing ring that outruns the fireball and is gone in a sixth of
+     a second, which is what reads as a bang rather than a bonfire */
+  var shock=new THREE.Sprite(new THREE.SpriteMaterial({map:TX.ring,color:new THREE.Color(0xffd8a8).multiplyScalar(2.2),transparent:true,blending:THREE.AdditiveBlending,depthWrite:false,opacity:0}));
+  shock.visible=false;scene.add(shock);
+  /* a single disc reads as a decal; real fire is lumpy, so the core is surrounded by lobes that
+     start late, push outward and cool at their own rate */
+  var lobes=[];
+  for(var lbi=0;lbi<BLAST_LOBES;lbi++){
+    var lm=new THREE.Sprite(new THREE.SpriteMaterial({map:lbi%2?TX.flash:TX.flash2,color:0xffffff,transparent:true,blending:THREE.AdditiveBlending,depthWrite:false,opacity:0}));
+    lm.visible=false;scene.add(lm);
+    lobes.push({s:lm,ox:0,oy:0,oz:0,delay:0,mult:1});
+  }
   fire.visible=ringFlat.visible=ringSprite.visible=false;scene.add(fire);scene.add(ringFlat);scene.add(ringSprite);
-  blastPool.push({fire:fire,ring:ringFlat,ringS:ringSprite,t:99,scale:1,cyan:false});
+  blastPool.push({fire:fire,ring:ringFlat,ringS:ringSprite,shock:shock,lobes:lobes,
+                  t:99,scale:1,cyan:false,px:0,py:0,pz:0});
 }
 function blastFx(x,y,z,scale,cyan){
   var b=blastPool[blastHead];blastHead=(blastHead+1)%BLAST_MAX;
-  b.t=0;b.scale=scale||1;b.cyan=!!cyan;
+  b.t=0;b.scale=scale||1;b.cyan=!!cyan;b.px=x;b.py=y;b.pz=z;
   b.fire.position.set(x,y,z);b.fire.material.rotation=Math.random()*TAU;b.fire.visible=true;
   b.fire.material.map=Math.random()<0.5?TX.flash:TX.flash2;
-  if(cyan){b.ringS.position.set(x,y,z);b.ringS.visible=true;b.ring.visible=false;}
+  if(cyan){b.ringS.position.set(x,y,z);b.ringS.visible=true;b.ring.visible=false;b.shock.visible=false;
+    for(var lz2=0;lz2<BLAST_LOBES;lz2++)b.lobes[lz2].s.visible=false;}
   else{
     b.ring.position.set(x,x>-1.3?-1.02:0.06,z);b.ring.visible=true;b.ringS.visible=false;
-    puff(x,y+0.15,z,6*b.scale,1.3*b.scale,0,0.8,0,0x55585a,1.9,0.72);
-    puff(x,y+0.05,z,4*b.scale,0.8*b.scale,0,1.7,0,0xa9a39a,0.55,0.5);
-    muzzleLight.position.set(x,y+0.5,z);muzzleLight.intensity=6.5*b.scale;
+    b.shock.position.set(x,y,z);b.shock.visible=true;
+    for(var li=0;li<BLAST_LOBES;li++){
+      var L=b.lobes[li],la=Math.random()*TAU,le=Math.random()*1.1-0.35;
+      L.ox=Math.cos(la)*Math.cos(le);L.oy=Math.sin(le)+0.25;L.oz=Math.sin(la)*Math.cos(le);
+      L.delay=0.015+Math.random()*0.075;L.mult=0.45+Math.random()*0.5;
+      L.s.material.rotation=Math.random()*TAU;
+      L.s.material.map=Math.random()<0.5?TX.flash:TX.flash2;
+      L.s.visible=false;
+    }
+    /* smoke: a fast dirty ball, a rising column behind it, and a low skirt that hugs the floor */
+    puff(x,y+0.15,z,7*b.scale,1.4*b.scale,0,0.8,0,0x3d4042,2.4,0.72);
+    puff(x,y+0.05,z,5*b.scale,0.9*b.scale,0,1.9,0,0x9a948b,0.7,0.5);
+    puff(x,y+0.55*b.scale,z,4*b.scale,1.1*b.scale,0,2.4,0,0x6b6862,1.7,0.40);
+    puff(x,y-0.10,z,5*b.scale,1.0*b.scale,0,0.15,0,0x8b877e,1.2,0.30);
+    blastEmbers(x,y,z,b.scale);
+    muzzleLight.position.set(x,y+0.5,z);muzzleLight.intensity=Math.max(muzzleLight.intensity,26*b.scale);
   }
 }
 function updateBlasts(dt){
@@ -1390,12 +1386,48 @@ function updateBlasts(dt){
     var fs=(b.cyan?(0.5+1.4*kf):(1.3+3.4*kf))*b.scale;
     b.fire.scale.set(fs,fs,1);b.fire.material.opacity=Math.pow(1-kf,1.2);
     if(b.cyan)b.fire.material.color.setRGB(0.6+0.4*(1-kf),1,1);
-    else b.fire.material.color.setRGB(1,0.45+0.55*(1-kf),0.1+0.75*(1-kf)*(1-kf));
+    else{
+      /* In a float buffer the detonation can be what it is: white hot at the front, ten times over
+         the threshold so the bloom tears, then cooling through yellow into a deep red as it dies. */
+      var heat=Math.pow(1-kf,1.6),boost=1.0+9.0*heat;
+      b.fire.material.color.setRGB(boost,boost*(0.34+0.56*(1-kf)),boost*(0.07+0.5*Math.pow(1-kf,3)));
+    }
     if(kf>=1)b.fire.visible=false;
+    var lobesLive=false;
+    if(!b.cyan){
+      for(var lq=0;lq<BLAST_LOBES;lq++){
+        var LB=b.lobes[lq],lt=(b.t-LB.delay)/0.30;
+        if(lt<0){LB.s.visible=false;lobesLive=true;continue;}
+        if(lt>=1){LB.s.visible=false;continue;}
+        lobesLive=true;LB.s.visible=true;
+        var lspread=(0.35+lt*1.7)*b.scale;
+        LB.s.position.set(b.px+LB.ox*lspread,b.py+LB.oy*lspread*0.8+lt*0.55*b.scale,b.pz+LB.oz*lspread);
+        var lsz=(0.9+2.5*lt)*b.scale*LB.mult;LB.s.scale.set(lsz,lsz,1);
+        var lheat=Math.pow(1-lt,1.7),lb=0.8+7.0*lheat;
+        LB.s.material.color.setRGB(lb,lb*(0.30+0.52*(1-lt)),lb*(0.05+0.42*Math.pow(1-lt,3)));
+        LB.s.material.opacity=Math.pow(1-lt,1.5)*0.85;
+      }
+      var ks=Math.min(1,b.t/0.16);
+      if(ks<1){
+        lobesLive=true;b.shock.visible=true;
+        var ss=(0.5+9.5*ks)*b.scale;b.shock.scale.set(ss,ss,1);
+        b.shock.material.opacity=Math.pow(1-ks,2.2)*0.55;
+      }else b.shock.visible=false;
+      /* The flash owns the shared muzzle light outright for a quarter second and drives its own
+         curve down to nothing. Only raising it would leave the linear decay in player.js, which
+         runs at 26 a second, a full second to walk a 26 peak back down - the platform stayed lit
+         warm long after the fireball had gone. */
+      var kl=Math.min(1,b.t/0.28);
+      if(kl<1){
+        lobesLive=true;
+        muzzleLight.position.set(b.px,b.py+0.5,b.pz);
+        muzzleLight.intensity=26*b.scale*Math.pow(1-kl,2.2);
+      }
+    }
     var rs=(b.cyan?(0.3+2.2*kr):(0.6+7.5*kr))*b.scale,ro=Math.pow(1-kr,2)*(b.cyan?0.9:0.7);
     if(b.cyan){b.ringS.scale.set(rs,rs,1);b.ringS.material.opacity=ro;if(kr>=1)b.ringS.visible=false;}
     else{b.ring.scale.set(rs,1,rs);b.ring.material.opacity=ro;if(kr>=1)b.ring.visible=false;}
-    if(kf>=1&&kr>=1)b.t=99;
+    if(kf>=1&&kr>=1&&!lobesLive)b.t=99;
   }
 }
 function railImpactFx(x,y,z){
@@ -1479,7 +1511,8 @@ var TRACER_CFG=[
   {speed:420,length:3.2,width:0.065,color:0xffca66},   /* carbine: bright amber-white */
   {speed:320,length:1.6,width:0.048,color:0xff8833},   /* shotgun pellets: fiery orange */
   {speed:390,length:2.4,width:0.054,color:0xffe47a},   /* smg: bright golden */
-  {speed:0,  length:0,  width:0.14, color:0x40e8ff}    /* railgun beam: intense cyan plasma */
+  {speed:0,  length:0,  width:0.14, color:0x40e8ff},   /* railgun beam: intense cyan plasma */
+  {speed:380,length:2.0,width:0.050,color:0xffd97a}    /* pistol: short warm tracer */
 ];
 var tracerTex=paint(64,256,function(g,w,h){
   g.clearRect(0,0,w,h);
@@ -1618,5 +1651,3 @@ function sfxBulletSnap() {
     osc.stop(actx.currentTime + 0.040);
   } catch(e) {}
 }
-
-
