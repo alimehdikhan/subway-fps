@@ -164,7 +164,9 @@ var GYRO = {
   hasMotionRate: false,
   listenerActive: false,
   lastEventT: null,   // wall clock of the last sensor event, for real dt
-  lastMotionT: 0      // last devicemotion with a usable rate, for the fallback watchdog
+  lastMotionT: 0,     // last devicemotion with a usable rate, for the fallback watchdog
+  hz: 0,              // measured sensor reporting rate, for the diagnostic readout
+  events: 0           // total sensor events seen
 };
 
 /* Real elapsed time between sensor events. Neither devicemotion nor deviceorientation
@@ -173,7 +175,29 @@ function gyroEventDt(){
   var now = (typeof performance !== 'undefined' ? performance.now() : Date.now());
   var dt = (GYRO.lastEventT === null) ? (1 / 60) : (now - GYRO.lastEventT) / 1000;
   GYRO.lastEventT = now;
-  return clamp(dt, 0.002, 0.1);
+  dt = clamp(dt, 0.002, 0.1);
+  /* measured reporting rate, for the readout in the settings panel */
+  GYRO.hz += ((1 / dt) - GYRO.hz) * 0.05;
+  GYRO.events++;
+  return dt;
+}
+
+/* Live sensor readout. Gyro behaviour depends entirely on what a given handset
+   reports, which cannot be seen from a desktop, so surface it while the panel is
+   open: which event source is driving, how fast it arrives, and the current rate. */
+var gyroDiagTimer = null;
+function updateGyroDiag(){
+  var el = $('gyro-diag'); if(!el) return;
+  if(GYRO.status === 'unsupported'){ el.textContent = 'No motion sensor on this device.'; return; }
+  if(!GYRO.listenerActive){ el.textContent = 'Sensor not started - enable gyro first.'; return; }
+  var src = GYRO.hasMotionRate ? 'devicemotion' : 'deviceorientation';
+  var age = GYRO.lastEventT === null ? Infinity :
+    ((typeof performance !== 'undefined' ? performance.now() : Date.now()) - GYRO.lastEventT);
+  if(!GYRO.events){ el.textContent = 'Waiting for the first sensor event...'; return; }
+  if(age > 1000){ el.textContent = src + ' - stopped reporting (' + Math.round(age / 1000) + 's ago)'; return; }
+  el.textContent = src + ' - ' + Math.round(GYRO.hz) + ' Hz - yaw ' +
+    GYRO.smoothYawRate.toFixed(1) + ' deg/s - pitch ' + GYRO.smoothPitchRate.toFixed(1) +
+    ' deg/s - screen ' + GYRO.screenAngle + ' deg';
 }
 
 // Check platform hardware support
@@ -353,14 +377,30 @@ function processGyroMotion(rawYawRate, rawPitchRate, dt){
    parameter the body never read, and every caller passed a hardcoded 0.016. That fixed
    the turn per EVENT rather than per second: a phone delivering devicemotion at 120Hz
    aimed twice as fast as one at 60Hz, and a frame that happened to receive no event
-   did not turn at all. 0.204 is the old 0.0034 per event times the 60Hz it was tuned
-   against, so the feel at 60Hz is unchanged. */
+   did not turn at all.
+
+   The scale is now 1:1 at sens 1.0 - turn the handset a degree, the view turns a
+   degree - so the slider reads as a plain multiplier. Carrying the old constant
+   forward (0.0034 per event x 60Hz = 0.204) preserved the arithmetic but not a usable
+   feel: it worked out at 11.5x at the default and 34x at the top of the slider, where
+   gyro aiming wants roughly 1-3x. On a handset whose sensor reported slower than 60Hz
+   the old per-event bug had been quietly holding that number down. */
 function applyGyroLook(dt){
   if(!GYRO.enabled || G.state !== 'play' || typeof P === 'undefined') return;
   if(!(dt > 0)) return;
   if(dt > 0.1) dt = 0.1;              /* after a stall, do not fling the camera */
 
-  var baseSens = 0.204 * GYRO.sens;
+  /* A held rate is only meaningful while the sensor is still reporting. Integrating
+     the last known rate on every frame keeps turning the camera forever once a device
+     goes quiet - which the old per-event code could not do, because no event simply
+     meant no movement. Anything staler than ~7 frames is treated as stopped. */
+  var nowT = (typeof performance !== 'undefined' ? performance.now() : Date.now());
+  if(GYRO.lastEventT === null || (nowT - GYRO.lastEventT) > 120){
+    GYRO.smoothYawRate = 0; GYRO.smoothPitchRate = 0;
+    return;
+  }
+
+  var baseSens = 0.0174533 * GYRO.sens;   /* deg -> rad: sens is the multiplier */
   var adsProg = P.ads || 0;
   /* Scope only: ride the ADS progression rather than switching at a threshold, so the
      gyro fades in as the sights come up instead of snapping on part-way through. */
@@ -565,11 +605,15 @@ function openGyroModal(){
   if(!m) return;
   m.hidden = false;
   updateGyroUI();
+  updateGyroDiag();
+  if(gyroDiagTimer) clearInterval(gyroDiagTimer);
+  gyroDiagTimer = setInterval(updateGyroDiag, 250);
 }
 function closeGyroModal(){
   var m = $('gyro-modal');
   if(!m) return;
   m.hidden = true;
+  if(gyroDiagTimer){ clearInterval(gyroDiagTimer); gyroDiagTimer = null; }
   saveGyroSettings();
   updateGyroUI();
 }
